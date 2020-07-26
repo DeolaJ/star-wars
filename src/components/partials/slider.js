@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import ListItem from './list-item';
 
-const Slider = ({ items, resultsPerView, imagePosition, view }) => {
+const Slider = ({ items, resultsPerView, imagePosition }) => {
   return (
     <div className="slider">
       <div className="slider__body">
@@ -11,7 +11,7 @@ const Slider = ({ items, resultsPerView, imagePosition, view }) => {
             <ListItem 
               key={item.title} 
               imagePosition={imagePosition}
-              view={view}
+              view="grid"
               title={item.title}
               subtitle={item.subtitle}
               link={item.link}
@@ -32,7 +32,6 @@ Slider.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   resultsPerView: PropTypes.number.isRequired,
   imagePosition: PropTypes.string.isRequired,
-  view: PropTypes.string.isRequired,
 };
 
 export default Slider;
