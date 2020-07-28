@@ -13,7 +13,7 @@ const mainhero = () => (
       <p className="hero__subtext">
         Find you favourite Characters, Films, Species, Starships and Planets.
       </p>
-      <SearchBar />
+      <SearchBar handleSearch={() => null}/>
     </div>
   </Hero>
 );

@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import Logo from '../assets/logo.png';
+import Logo from '../../assets/logo.png';
 
 const Hero = ({ children }) => {
   return (
