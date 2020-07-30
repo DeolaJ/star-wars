@@ -1,0 +1,67 @@
+.description {
+
+  .hero__body {
+
+    > img {
+      width: 65%;
+    }
+
+    .description__title {
+      color: white;
+      text-align: left;
+      padding-left: 1.5rem;
+      font-size: 1.4rem;
+    }
+  }
+  
+  &__slider {
+    text-align: right;
+    margin: 1rem 0;
+    float: right;
+    margin-right: 1.5rem;
+    
+    button {
+      padding: .8rem;
+      margin: 0 .5rem;
+      border: 1px solid #494857;
+      background: none;
+      background: white;
+      height: 65px;
+      width: 65px;
+      border-radius: 50%;
+
+      + button {
+        margin-right: 0;
+      }
+
+      img {
+        width: 28px;
+      }
+    }
+
+    @media (min-width: 768px) {
+      margin-top: -4rem;
+    }
+  }
+
+  &__body,
+  &__recent {
+    padding: 2rem;
+  }
+
+  &__recent {
+    border-top: 2px solid black;
+    margin-top: 3rem;
+  }
+
+  .recently-viewed {
+
+    &__title {
+      text-align: center;
+    }
+
+    .list-item.grid.top {
+      flex-basis: 30%;
+    }
+  }
+}

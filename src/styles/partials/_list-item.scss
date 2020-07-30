@@ -1,0 +1,156 @@
+.list-item {
+
+  &.grid {
+    flex-basis: 30%;
+    margin-bottom: 3rem;
+    
+    &.left {
+      display: flex;
+      flex-basis: 48%;
+      align-self: stretch;
+      align-items: flex-start;
+
+      .list-item__image {
+
+        img {
+          height: 300px;
+          width: 300px;
+          object-fit: cover;
+        }
+
+        @media (max-width: 900px) {
+
+          img {
+            height: 250px;
+            width: 250px;
+          }
+        }
+
+        @media (max-width: 768px) {
+
+          img {
+            height: 300px;
+            width: 300px;
+          }
+        }
+
+        @media (max-width: 500px) {
+
+          img {
+            height: 250px;
+            width: 250px;
+          }
+        }
+      }
+
+      .list-item__body {
+        height: calc(100% - 4px);
+        flex-shrink: 12;
+        padding-top: 3rem;
+      }
+
+      @media (max-width: 768px) {
+        flex-basis: 100%;
+      }
+    }
+
+    &.top {
+      position: relative;
+
+      .list-item__image img {
+        max-width: 100%;
+        width: fit-content;
+        height: 200px;
+        object-fit: cover;
+      }
+
+      .list-item__body {
+        position: relative;
+        transform: translate(8px, -6px);
+        background-color: #f2f2f2;
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        background-color: #d8d8d8;
+        height: calc(100% + 2px);
+        width: 100%;
+        top: 0;
+        left: 0;
+        z-index: -2;
+      }
+
+      @media (max-width: 900px) {
+        flex-basis: 45%;
+      }
+
+      @media (max-width: 530px) {
+        flex-basis: 80%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
+    .list-item__description {
+      min-height: 65px;
+    }
+  }
+  
+  &__body {
+    padding: 1rem;
+    background-color: #f2f2f2;
+  }
+
+  &__description {
+    color: #494857;
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.4;
+
+    a {
+      color: #494857;
+      font-weight: 500;
+      margin-left: .5rem;
+    }
+  }
+
+  &__title {
+    color: #494857;
+
+    h4 {
+      margin: .5rem 0;
+    }
+  }
+
+  &__button {
+    text-align: right;
+    display: inherit;
+  }
+
+  &__button button {
+    margin-top: 1rem;
+    background-color: #d8d8d8;
+    padding: .7rem 1.2rem;
+    font-size: .8rem;
+
+    img {
+      width: 20px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+  }
+
+  &.list {
+    flex-basis: 100%;
+    padding: .5rem;
+
+    .list-item__image {
+      display: none;
+    }
+  }
+
+  img {
+    max-width: 100%;
+  }
+}

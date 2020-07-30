@@ -1,0 +1,114 @@
+.hero {
+  position: relative;
+  min-height: 600px;
+
+  &__banner {
+    object-fit: cover;
+    height: 100%;
+    width: 100%;
+    min-height: 600px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+
+    @media (max-width: 450px) {
+      min-height: 450px;
+    }
+  }
+
+  > :not(.hero__banner) {
+    position: relative;
+    z-index: 2;
+  }
+
+  &__navbar {
+    padding: 2rem;
+
+    @media (max-width: 768px) {
+      padding: 1.5rem;
+    }
+
+    @media (max-width: 450px) {
+      height: 1rem;
+    }
+  }
+
+  &__logo {
+    height: 50px;
+
+    @media (max-width: 768px) {
+      height: 45px;
+    }
+
+    @media (max-width: 450px) {
+      height: 40px;
+    }
+  }
+
+  &__body {
+    max-width: 800px;
+    margin: 1rem auto 0;
+    text-align: center;
+  }
+
+  &__content {
+    color: white;
+    padding: 3rem 2rem;
+    background-color: rgba(0, 0, 0, .2);
+
+    @media (max-width: 450px) {
+      padding: 4rem 1rem;
+    }
+  }
+
+  &__heading {
+    max-width: 40%;
+    padding: .6rem 0;
+    border-bottom: 2px solid white;
+    margin: 0 auto;
+
+    > * {
+      margin: 0 .3rem;
+    }
+
+    img {
+      vertical-align: middle;
+    }
+
+    h2 {
+      display: inline-block;
+    }
+
+    @media (max-width: 768px) {
+      max-width: 60%;
+    }
+
+    @media (max-width: 460px) {
+      max-width: 80%;
+
+      h2 {
+        font-size: 1.1rem;
+      }
+    }
+  }
+
+  &__subtext {
+    max-width: 60%;
+    margin: 1.2rem auto;
+    line-height: 1.5;
+
+    @media (max-width: 768px) {
+      max-width: 70%;
+    }
+
+    @media (max-width: 460px) {
+      max-width: 90%;
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 450px) {
+    min-height: 450px;
+  }
+}

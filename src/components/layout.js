@@ -3,12 +3,17 @@ import PropTypes from 'prop-types';
 import MainHero from './mainhero';
 import Footer from './partials/footer';
 
-const Layout = ({ children, description }) => {
+const Layout = ({
+  children, description, doSearchAll, resetSearchAll
+}) => {
   return (
     <>
       {
         !description && (
-          <MainHero />
+          <MainHero 
+            doSearchAll={doSearchAll}
+            resetSearchAll={resetSearchAll}
+          />
         )
       }
       {children}
@@ -17,8 +22,15 @@ const Layout = ({ children, description }) => {
   );
 };
 
+Layout.defaultProps = {
+  doSearchAll: () => null,
+  resetSearchAll: () => null,
+}
+
 Layout.propTypes = {
   children: PropTypes.node.isRequired,
+  doSearchAll: PropTypes.func,
+  resetSearchAll: PropTypes.func,
 };
 
 export default Layout;

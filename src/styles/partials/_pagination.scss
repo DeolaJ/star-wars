@@ -1,0 +1,47 @@
+.pagination {
+  width: 100%;
+
+  &__list {
+    list-style-type: none;
+    text-align: center;
+    margin: 1rem 0;
+
+    li {
+      display: inline-block;
+    }
+
+    li button {
+      margin: 0 .5rem;
+      padding: .4rem;
+      font-size: .9rem;
+      border: 1px solid #494857;
+      background: none;
+      color: #494857;
+    }
+
+    li.active button {
+      background-color: black;
+      color: white;
+    }
+  }
+
+  &__controls {
+    text-align: right;
+    margin: 1rem 0;
+    
+    button {
+      padding: .4rem;
+      margin: 0 .5rem;
+      border: 1px solid #494857;
+      background: none;
+
+      + button {
+        margin-right: 0;
+      }
+
+      img {
+        width: 23px;
+      }
+    }
+  }
+}
