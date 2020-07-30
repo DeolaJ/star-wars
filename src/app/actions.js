@@ -7,6 +7,16 @@ export const FETCH_PLANETS_FAILURE = "FETCH_PLANETS_FAILURE";
 export const FETCH_STARSHIPS_START = "FETCH_STARSHIPS_START";
 export const FETCH_STARSHIPS_SUCCESS = "FETCH_STARSHIPS_SUCCESS";
 export const FETCH_STARSHIPS_FAILURE = "FETCH_STARSHIPS_FAILURE";
+export const SEARCH_ALL = "SEARCH_ALL";
+export const SEARCH_CHARACTERS = "SEARCH_CHARACTERS";
+export const SEARCH_PLANETS = "SEARCH_PLANETS";
+export const SEARCH_STARSHIPS = "SEARCH_STARSHIPS";
+export const RESET_SEARCH_ALL = "RESET_SEARCH_ALL";
+export const RESET_SEARCH_CHARACTERS = "RESET_SEARCH_CHARACTERS";
+export const RESET_SEARCH_PLANETS = "RESET_SEARCH_PLANETS";
+export const RESET_SEARCH_STARSHIPS = "RESET_SEARCH_STARSHIPS";
+export const SET_RECENTLY_VIEWED = "SET_RECENTLY_VIEWED";
+export const SET_DESCRIPTION = "SET_DESCRIPTION";
 
 const fetchCharactersStart = (payload) => ({
   type: FETCH_CHARACTERS_START,
@@ -53,6 +63,56 @@ const fetchStarshipsSuccess = (payload) => ({
   payload,
 })
 
+const searchAll = (payload) => ({
+  type: SEARCH_ALL,
+  payload,
+})
+
+const searchCharacters = (payload) => ({
+  type: SEARCH_CHARACTERS,
+  payload,
+})
+
+const searchPlanets = (payload) => ({
+  type: SEARCH_PLANETS,
+  payload,
+})
+
+const searchStarships = (payload) => ({
+  type: SEARCH_STARSHIPS,
+  payload,
+})
+
+const resetAll = (payload) => ({
+  type: RESET_SEARCH_ALL,
+  payload,
+})
+
+const resetCharacters = (payload) => ({
+  type: RESET_SEARCH_CHARACTERS,
+  payload,
+})
+
+const resetPlanets = (payload) => ({
+  type: RESET_SEARCH_PLANETS,
+  payload,
+})
+
+const resetStarships = (payload) => ({
+  type: RESET_SEARCH_STARSHIPS,
+  payload,
+})
+
+const recentlyViewed = (payload) => ({
+  type: SET_RECENTLY_VIEWED,
+  payload,
+})
+
+const setDescription = (payload) => ({
+  type: SET_DESCRIPTION,
+  payload,
+})
+
 const updateMoreResults = async (item, next) => {
   if (!next) {
     return item;
@@ -71,7 +131,8 @@ const updateMoreResults = async (item, next) => {
   }
 }
 
-export const doFetchCharacters = () => async (dispatch) => {
+// Loading Action Creators
+export const doFetchCharacters = (initial) => async (dispatch) => {
   dispatch(fetchCharactersStart());
 
   let characters = [];
@@ -81,13 +142,22 @@ export const doFetchCharacters = () => async (dispatch) => {
   .then(response => response.json())
   .then(async response => {
     characters.push(...response.results);
+    // dispatch the first 10 results
+    if (initial) {
+      dispatch(fetchCharactersSuccess({
+        characters,
+        loadingCharacters: false,
+        initial: true
+      }))
+    }
+    // Dispatch the remaining results later
     if (response.next) {
       characters = await updateMoreResults(characters, response.next);
+      dispatch(fetchCharactersSuccess({
+        characters,
+        loadingCharacters: false,
+      }))
     }
-    dispatch(fetchCharactersSuccess({
-      characters,
-      loadingCharacters: false
-    }))
   })
   .catch(error => {
     dispatch(fetchCharactersFailure({
@@ -97,7 +167,7 @@ export const doFetchCharacters = () => async (dispatch) => {
   })
 }
 
-export const doFetchPlanets = () => async (dispatch) => {
+export const doFetchPlanets = (initial) => async (dispatch) => {
   dispatch(fetchPlanetsStart());
 
   let planets = [];
@@ -107,13 +177,22 @@ export const doFetchPlanets = () => async (dispatch) => {
   .then(response => response.json())
   .then(async response => {
     planets.push(...response.results);
+    // dispatch the first 10 results
+    if (initial) {
+      dispatch(fetchPlanetsSuccess({
+        planets,
+        loadingPlanets: false,
+        initial: true
+      }))
+    }
+    // Dispatch the remaining results later
     if (response.next) {
       planets = await updateMoreResults(planets, response.next);
+      dispatch(fetchPlanetsSuccess({
+        planets,
+        loadingPlanets: false,
+      }))
     }
-    dispatch(fetchPlanetsSuccess({
-      planets,
-      loadingPlanets: false
-    }))
   })
   .catch(error => {
     dispatch(fetchPlanetsFailure({
@@ -123,7 +202,7 @@ export const doFetchPlanets = () => async (dispatch) => {
   })
 }
 
-export const doFetchStarships = () => async (dispatch) => {
+export const doFetchStarships = (initial) => async (dispatch) => {
   dispatch(fetchStarshipsStart());
 
   let starships = [];
@@ -133,13 +212,22 @@ export const doFetchStarships = () => async (dispatch) => {
   .then(response => response.json())
   .then(async response => {
     starships.push(...response.results);
+    // dispatch the first 10 results
+    if (initial) {
+      dispatch(fetchStarshipsSuccess({
+        starships,
+        loadingStarships: false,
+        initial: true
+      }))
+    }
+    // Dispatch the remaining results later
     if (response.next) {
       starships = await updateMoreResults(starships, response.next);
+      dispatch(fetchStarshipsSuccess({
+        starships,
+        loadingStarships: false,
+      }))
     }
-    dispatch(fetchStarshipsSuccess({
-      starships,
-      loadingStarships: false
-    }))
   })
   .catch(error => {
     dispatch(fetchStarshipsFailure({
@@ -149,8 +237,95 @@ export const doFetchStarships = () => async (dispatch) => {
   })
 }
 
+// Filter Action Creators
+export const doSearchCharacters = (characters, param) => (dispatch) => (
+  dispatch(searchCharacters({
+    characters,
+    param,
+    isFilteringCharacters: true,
+  }))
+)
+
+export const doSearchPlanets = (planets, param) => (dispatch) => (
+  dispatch(searchPlanets({
+    planets,
+    param,
+    isFilteringPlanets: true,
+  }))
+)
+
+export const doSearchStarships = (starships, param) => (dispatch) => (
+  dispatch(searchStarships({
+    starships,
+    param,
+    isFilteringStarships: true,
+  }))
+)
+
+export const doSearchAll = (param) => (dispatch) => (
+  // Filtering is done on the reducer function
+  dispatch(searchAll({
+    param,
+    isFilteringAll: true,
+  }))
+)
+
+export const resetSearchCharacters = () => (dispatch) => (
+  dispatch(resetCharacters({
+    allFilteredCharacters: [],
+    isFilteringCharacters: false
+  }))
+)
+
+export const resetSearchPlanets = () => (dispatch) => (
+  dispatch(resetPlanets({
+    allFilteredStarships: [],
+    isFilteringPlanets: false
+  }))
+)
+
+export const resetSearchStarships = () => (dispatch) => (
+  dispatch(resetStarships({
+    allFilteredStarships: [],
+    isFilteringStarships: false,
+  }))
+)
+
+export const resetSearchAll = () => (dispatch) => (
+  dispatch(resetAll({
+    allFilteredCharacters: [],
+    allFilteredPlanets: [],
+    allFilteredStarships: [],
+    isFilteringAll: false,
+  }))
+)
+
+export const setRecentlyViewed = (type, item) => (dispatch) => (
+  dispatch(recentlyViewed({
+    type,
+    item
+  }))
+)
+
+export const doSetDescription = (category, name) => (dispatch) => (
+  dispatch(setDescription({
+    category,
+    name
+  }))
+)
+
 export default {
   doFetchCharacters,
   doFetchPlanets,
   doFetchStarships,
+  doSearchAll,
+  doSearchCharacters,
+  doSearchPlanets,
+  doSearchStarships,
+  resetSearchAll,
+  resetSearchCharacters,
+  resetSearchPlanets,
+  resetSearchStarships,
+  setRecentlyViewed,
+  doSetDescription,
 }

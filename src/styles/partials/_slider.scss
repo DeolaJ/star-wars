@@ -1,0 +1,42 @@
+.slider {
+  
+  &__body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    
+    > .list-item.grid.top {
+      flex-basis: 30%;
+
+      @media (max-width: 768px) {
+        flex-basis: 80% !important;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+  }
+
+  &__control {
+    list-style-type: none;
+    text-align: center;
+    margin: 1rem 0;
+
+    li {
+      display: inline-block;
+    }
+
+    li button {
+      margin: 0 .5rem;
+      border: 1px solid black;
+      height: 15px;
+      background: none;
+      border-radius: 50%;
+      width: 15px;
+    }
+
+    li.active button {
+      background-color: black;
+    }
+  }
+}
