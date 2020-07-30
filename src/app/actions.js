@@ -124,6 +124,7 @@ const updateMoreResults = async (item, next) => {
     .then(response => response.json())
     .then(response => {
       nextPage = response.next;
+      nextPage = nextPage && nextPage.replace("http", "https");
       return response.results;
     })
     item.push(...results);
@@ -152,7 +153,8 @@ export const doFetchCharacters = (initial) => async (dispatch) => {
     }
     // Dispatch the remaining results later
     if (response.next) {
-      characters = await updateMoreResults(characters, response.next);
+      const nextPage = response.next.replace("http", "https")
+      characters = await updateMoreResults(characters, nextPage);
       dispatch(fetchCharactersSuccess({
         characters,
         loadingCharacters: false,
@@ -187,7 +189,8 @@ export const doFetchPlanets = (initial) => async (dispatch) => {
     }
     // Dispatch the remaining results later
     if (response.next) {
-      planets = await updateMoreResults(planets, response.next);
+      const nextPage = response.next.replace("http", "https")
+      planets = await updateMoreResults(planets, nextPage);
       dispatch(fetchPlanetsSuccess({
         planets,
         loadingPlanets: false,
@@ -222,7 +225,8 @@ export const doFetchStarships = (initial) => async (dispatch) => {
     }
     // Dispatch the remaining results later
     if (response.next) {
-      starships = await updateMoreResults(starships, response.next);
+      const nextPage = response.next.replace("http", "https")
+      starships = await updateMoreResults(starships, nextPage);
       dispatch(fetchStarshipsSuccess({
         starships,
         loadingStarships: false,
