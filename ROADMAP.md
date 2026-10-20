@@ -1,0 +1,32 @@
+# Roadmap
+
+A rough plan for the work ahead. Estimates are approximate.
+
+## Dependency upgrades (about 8 hours)
+
+- [ ] Move from Create React App 3 to Vite
+- [ ] React 16 to React 18, React Router 5 to 6
+- [ ] Redux to Redux Toolkit, or React Query for server state
+- [ ] Replace `node-sass` with `sass` and drop the unmaintained `react-reveal`
+- [ ] Only include `redux-logger` in development builds
+
+## Data and performance (about 5 hours)
+
+- [ ] Move the hard-coded `swapi.dev` URLs into one config value, with a fallback mirror when the API is down
+- [ ] Load pages on demand instead of fetching every page of results up front
+- [ ] Cache responses between visits
+- [ ] Lazy-load images and serve them as WebP
+
+## Features (about 6 hours)
+
+- [ ] Add films, species and vehicles
+- [ ] Link related items on the detail page (a character's homeworld and starships, a planet's residents)
+- [ ] Filters and sorting (for example by planet climate or starship class)
+- [ ] Shareable URLs that keep the search query and page
+
+## Quality (about 6 hours)
+
+- [ ] Replace the default CRA test, which still looks for "learn react", with tests for the reducers, action creators and main pages
+- [ ] Accessibility pass on search, pagination and the slider (the `jsx-a11y` lint rules are already on)
+- [ ] Error and empty states for failed or empty searches
+- [ ] GitHub Actions workflow for lint, tests and build
