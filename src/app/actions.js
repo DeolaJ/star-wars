@@ -1,3 +1,5 @@
+import { API_ENDPOINTS } from '../config';
+
 export const FETCH_CHARACTERS_START = "FETCH_CHARACTERS_START";
 export const FETCH_CHARACTERS_SUCCESS = "FETCH_CHARACTERS_SUCCESS";
 export const FETCH_CHARACTERS_FAILURE = "FETCH_CHARACTERS_FAILURE";
@@ -137,9 +139,7 @@ export const doFetchCharacters = (initial) => async (dispatch) => {
   dispatch(fetchCharactersStart());
 
   let characters = [];
-  return fetch(
-    'https://swapi.dev/api/people/'
-  )
+  return fetch(API_ENDPOINTS.characters)
   .then(response => response.json())
   .then(async response => {
     characters.push(...response.results);
@@ -173,9 +173,7 @@ export const doFetchPlanets = (initial) => async (dispatch) => {
   dispatch(fetchPlanetsStart());
 
   let planets = [];
-  return fetch(
-    'https://swapi.dev/api/planets/'
-  )
+  return fetch(API_ENDPOINTS.planets)
   .then(response => response.json())
   .then(async response => {
     planets.push(...response.results);
@@ -209,9 +207,7 @@ export const doFetchStarships = (initial) => async (dispatch) => {
   dispatch(fetchStarshipsStart());
 
   let starships = [];
-  return fetch(
-    'https://swapi.dev/api/starships/'
-  )
+  return fetch(API_ENDPOINTS.starships)
   .then(response => response.json())
   .then(async response => {
     starships.push(...response.results);

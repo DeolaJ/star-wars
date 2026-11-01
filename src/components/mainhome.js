@@ -10,7 +10,6 @@ const MainHome = ({
   characters, planets, starships, loadingCharactersError, 
   loadingPlanetsError, loadingStarshipsError,
 }) => {
-  console.log(loadingStarshipsError.message)
   return (
     <div className="home">
   
