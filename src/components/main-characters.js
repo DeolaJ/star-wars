@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
-import Fade from 'react-reveal/Fade';
 import PropTypes from 'prop-types';
 import Section from './partials/section';
 import SearchBar from './partials/searchbar';
@@ -114,15 +113,13 @@ const MainCharacters = ({
               isFilteringCharacters
 
               ? (
-                <Fade>
-                  <SearchResult
-                    type="specific"
-                    category="characters"
-                    allFilteredCharacters={allFilteredCharacters}
-                    charactersSearch={charactersSearch}
-                    view={view}
-                  />
-                </Fade>
+                <SearchResult
+                  type="specific"
+                  category="characters"
+                  allFilteredCharacters={allFilteredCharacters}
+                  charactersSearch={charactersSearch}
+                  view={view}
+                />
               ) 
               : (
                 <>

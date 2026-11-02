@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
 import PropTypes from 'prop-types';
-import Fade from 'react-reveal/Fade';
 import Section from './partials/section';
 import SearchBar from './partials/searchbar';
 import SearchResult from './partials/search-result';
@@ -79,15 +78,13 @@ const MainPlanets = ({
               isFilteringPlanets
 
               ? (
-                <Fade>
-                  <SearchResult
-                    type="specific"
-                    category="planets"
-                    allFilteredPlanets={allFilteredPlanets}
-                    planetsSearch={planetsSearch}
-                    view={view}
-                  />
-                </Fade>
+                <SearchResult
+                  type="specific"
+                  category="planets"
+                  allFilteredPlanets={allFilteredPlanets}
+                  planetsSearch={planetsSearch}
+                  view={view}
+                />
               )
 
               : (

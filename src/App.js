@@ -1,8 +1,7 @@
-import React, { Suspense, PureComponent } from 'react';
+import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import { Switch, Route } from 'react-router-dom';
 import './styles/main.scss';
-import Fade from 'react-reveal/Fade';
 import Home from './components/home';
 import Planets from './components/planets';
 import Characters from './components/characters';
@@ -32,7 +31,7 @@ class App extends PureComponent {
     const {
       characters, planets, starships, charactersSearch,
       planetsSearch, starshipsSearch, allFilteredCharacters,
-      allFilteredPlanets, allFilteredStarships, loadingCharactersError, 
+      allFilteredPlanets, allFilteredStarships, loadingCharactersError,
       loadingPlanetsError, loadingStarshipsError, isFilteringAll,
       isFilteringCharacters, isFilteringPlanets, isFilteringStarships,
       doSearchCharacters, resetSearchCharacters, doSearchStarships, resetSearchStarships,
@@ -41,107 +40,99 @@ class App extends PureComponent {
       doSetDescription, descriptionItem,
     } = this.props;
 
+    if (loadingCharacters || loadingPlanets || loadingStarships) {
+      return <Loader />;
+    }
+
     return (
       <Switch>
-        <Suspense fallback={<div>loading...</div>}>
-          {
-            (!loadingCharacters && !loadingPlanets && !loadingStarships) 
-            ? (
-              <Fade>
-                <Route exact path="/"  
-                  render={props => (
-                    <Home 
-                      {...props}
-                      characters={characters}
-                      planets={planets}
-                      starships={starships}
-                      loadingCharactersError={loadingCharactersError}
-                      loadingPlanetsError={loadingPlanetsError}
-                      loadingStarshipsError={loadingStarshipsError}
-                      allFilteredCharacters={allFilteredCharacters}
-                      allFilteredPlanets={allFilteredPlanets}
-                      allFilteredStarships={allFilteredStarships}
-                      charactersSearch={charactersSearch}
-                      planetsSearch={planetsSearch}
-                      starshipsSearch={starshipsSearch}
-                      isFilteringAll={isFilteringAll}
-                      doSearchAll={doSearchAll}
-                      resetSearchAll={resetSearchAll}
-                    />
-                  )} 
-                />
-                <Route path="/planets" 
-                  render={props => (
-                    <Planets 
-                      {...props}
-                      planets={planets}
-                      loadingPlanetsError={loadingPlanetsError}
-                      allFilteredPlanets={allFilteredPlanets}
-                      planetsSearch={planetsSearch}
-                      isFilteringPlanets={isFilteringPlanets}
-                      doSearchPlanets={doSearchPlanets}
-                      resetSearchPlanets={resetSearchPlanets}
-                      doSearchAll={doSearchAll}
-                      resetSearchAll={resetSearchAll}
-                    />
-                  )} 
-                />
-                <Route path="/characters" 
-                  render={props => (
-                    <Characters 
-                      {...props}
-                      characters={characters}
-                      loadingCharactersError={loadingCharactersError}
-                      allFilteredCharacters={allFilteredCharacters}
-                      charactersSearch={charactersSearch}
-                      isFilteringCharacters={isFilteringCharacters}
-                      doSearchCharacters={doSearchCharacters}
-                      resetSearchCharacters={resetSearchCharacters}
-                      doSearchAll={doSearchAll}
-                      resetSearchAll={resetSearchAll}
-                    />
-                  )}
-                />
-                <Route path="/starships" 
-                  render={props => (
-                    <Starships 
-                      {...props}
-                      starships={starships}
-                      loadingStarshipsError={loadingStarshipsError}
-                      allFilteredStarships={allFilteredStarships}
-                      starshipsSearch={starshipsSearch}
-                      isFilteringStarships={isFilteringStarships}
-                      doSearchStarships={doSearchStarships}
-                      resetSearchStarships={resetSearchStarships}
-                      doSearchAll={doSearchAll}
-                      resetSearchAll={resetSearchAll}
-                    />
-                  )} 
-                />
-                <Route path="/description/:category/:id" 
-                  render={props => (
-                    <Description 
-                      {...props}
-                      characters={characters}
-                      planets={planets}
-                      starships={starships}
-                      loadingCharactersError={loadingCharactersError}
-                      loadingPlanetsError={loadingPlanetsError}
-                      loadingStarshipsError={loadingStarshipsError}
-                      setRecentlyViewed={setRecentlyViewed}
-                      recentlyViewed={recentlyViewed}
-                      descriptionItem={descriptionItem}
-                      doSetDescription={doSetDescription}
-                    />
-                  )} 
-                />
-              </Fade>
-            )
-            : (
-              <Loader />
-            )
-          }
-        </Suspense>
+        <Route exact path="/"
+          render={props => (
+            <Home
+              {...props}
+              characters={characters}
+              planets={planets}
+              starships={starships}
+              loadingCharactersError={loadingCharactersError}
+              loadingPlanetsError={loadingPlanetsError}
+              loadingStarshipsError={loadingStarshipsError}
+              allFilteredCharacters={allFilteredCharacters}
+              allFilteredPlanets={allFilteredPlanets}
+              allFilteredStarships={allFilteredStarships}
+              charactersSearch={charactersSearch}
+              planetsSearch={planetsSearch}
+              starshipsSearch={starshipsSearch}
+              isFilteringAll={isFilteringAll}
+              doSearchAll={doSearchAll}
+              resetSearchAll={resetSearchAll}
+            />
+          )}
+        />
+        <Route path="/planets"
+          render={props => (
+            <Planets
+              {...props}
+              planets={planets}
+              loadingPlanetsError={loadingPlanetsError}
+              allFilteredPlanets={allFilteredPlanets}
+              planetsSearch={planetsSearch}
+              isFilteringPlanets={isFilteringPlanets}
+              doSearchPlanets={doSearchPlanets}
+              resetSearchPlanets={resetSearchPlanets}
+              doSearchAll={doSearchAll}
+              resetSearchAll={resetSearchAll}
+            />
+          )}
+        />
+        <Route path="/characters"
+          render={props => (
+            <Characters
+              {...props}
+              characters={characters}
+              loadingCharactersError={loadingCharactersError}
+              allFilteredCharacters={allFilteredCharacters}
+              charactersSearch={charactersSearch}
+              isFilteringCharacters={isFilteringCharacters}
+              doSearchCharacters={doSearchCharacters}
+              resetSearchCharacters={resetSearchCharacters}
+              doSearchAll={doSearchAll}
+              resetSearchAll={resetSearchAll}
+            />
+          )}
+        />
+        <Route path="/starships"
+          render={props => (
+            <Starships
+              {...props}
+              starships={starships}
+              loadingStarshipsError={loadingStarshipsError}
+              allFilteredStarships={allFilteredStarships}
+              starshipsSearch={starshipsSearch}
+              isFilteringStarships={isFilteringStarships}
+              doSearchStarships={doSearchStarships}
+              resetSearchStarships={resetSearchStarships}
+              doSearchAll={doSearchAll}
+              resetSearchAll={resetSearchAll}
+            />
+          )}
+        />
+        <Route path="/description/:category/:id"
+          render={props => (
+            <Description
+              {...props}
+              characters={characters}
+              planets={planets}
+              starships={starships}
+              loadingCharactersError={loadingCharactersError}
+              loadingPlanetsError={loadingPlanetsError}
+              loadingStarshipsError={loadingStarshipsError}
+              setRecentlyViewed={setRecentlyViewed}
+              recentlyViewed={recentlyViewed}
+              descriptionItem={descriptionItem}
+              doSetDescription={doSetDescription}
+            />
+          )}
+        />
       </Switch>
     );
   };
