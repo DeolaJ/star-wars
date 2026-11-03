@@ -33,7 +33,7 @@ Star Wars fans who want a quick, good-looking way to look things up, and develop
 
 ## Getting started
 
-You need Node.js and Yarn. The current dependencies (react-scripts 3, node-sass 4) need an older Node.js, such as Node 12 or 14; upgrading them is on the [roadmap](ROADMAP.md).
+You need Node.js and Yarn. react-scripts 3 needs an older Node.js, such as Node 12 or 14; upgrading it is on the [roadmap](ROADMAP.md).
 
     git clone https://github.com/DeolaJ/star-wars.git
     cd star-wars
