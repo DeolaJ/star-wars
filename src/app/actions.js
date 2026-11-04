@@ -129,8 +129,8 @@ const updateMoreResults = async (item, next) => {
       nextPage = nextPage && nextPage;
       return response.results;
     })
-    item.push(...results);
-    return updateMoreResults(item, nextPage);
+    // Build a new array: the previous one may already be in the store
+    return updateMoreResults([...item, ...results], nextPage);
   }
 }
 
@@ -138,11 +138,11 @@ const updateMoreResults = async (item, next) => {
 export const doFetchCharacters = (initial) => async (dispatch) => {
   dispatch(fetchCharactersStart());
 
-  let characters = [];
+  let characters;
   return fetch(API_ENDPOINTS.characters)
   .then(response => response.json())
   .then(async response => {
-    characters.push(...response.results);
+    characters = [...response.results];
     // dispatch the first 10 results
     if (initial) {
       dispatch(fetchCharactersSuccess({
@@ -172,11 +172,11 @@ export const doFetchCharacters = (initial) => async (dispatch) => {
 export const doFetchPlanets = (initial) => async (dispatch) => {
   dispatch(fetchPlanetsStart());
 
-  let planets = [];
+  let planets;
   return fetch(API_ENDPOINTS.planets)
   .then(response => response.json())
   .then(async response => {
-    planets.push(...response.results);
+    planets = [...response.results];
     // dispatch the first 10 results
     if (initial) {
       dispatch(fetchPlanetsSuccess({
@@ -206,11 +206,11 @@ export const doFetchPlanets = (initial) => async (dispatch) => {
 export const doFetchStarships = (initial) => async (dispatch) => {
   dispatch(fetchStarshipsStart());
 
-  let starships = [];
+  let starships;
   return fetch(API_ENDPOINTS.starships)
   .then(response => response.json())
   .then(async response => {
-    starships.push(...response.results);
+    starships = [...response.results];
     // dispatch the first 10 results
     if (initial) {
       dispatch(fetchStarshipsSuccess({

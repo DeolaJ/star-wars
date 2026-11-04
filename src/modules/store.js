@@ -7,7 +7,7 @@ export default function configureAppStore(preloadedState) {
     reducer: { app },
     preloadedState,
     middleware: (getDefaultMiddleware) =>
-      import.meta.env.DEV
+      import.meta.env.DEV && import.meta.env.MODE !== 'test'
         ? getDefaultMiddleware({ serializableCheck: false }).concat(logger)
         : getDefaultMiddleware({ serializableCheck: false }),
   });

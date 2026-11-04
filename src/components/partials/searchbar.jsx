@@ -3,7 +3,7 @@ import debounce from 'lodash/debounce';
 import PropTypes from 'prop-types';
 import Search from '../../assets/search.svg';
 
-const SearchBar = ({ handleSearch, mini }) => {
+const SearchBar = ({ handleSearch, mini = false }) => {
   const [searchValue, setSearchValue] = useState('')
   const updateSearchValue = useRef(debounce((value) => {
     handleSearch(value);
@@ -27,10 +27,6 @@ const SearchBar = ({ handleSearch, mini }) => {
     </div>
   );
 };
-
-SearchBar.defaultProps = {
-  mini: false,
-}
 
 SearchBar.propTypes = {
   handleSearch: PropTypes.func.isRequired,

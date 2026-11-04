@@ -45,6 +45,11 @@ No API keys or environment variables are needed.
 
     npm start
 
+### Tests
+
+    npm test          # watch mode
+    npm run test:run  # single run
+
 ### Linting
 
     npm run lint

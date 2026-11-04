@@ -17,8 +17,8 @@ import Starship6 from '../../assets/starship-6.jpg';
 import Arrow from '../../assets/right-arrow.svg';
 
 const ListItem = ({
-  imagePosition, name, population, birthyear, gender, 
-  view, model, cargo, temperature, type,
+  imagePosition, name, population = '', birthyear = '', gender = '',
+  view, model = '', cargo = '', temperature = '', type,
 }) => {
   const characterImages = [
     Character1, Character2, Character3, Character4
@@ -165,15 +165,6 @@ const ListItem = ({
     </div>
   );
 };
-
-ListItem.defaultProps = {
-  population: '',
-  birthyear: '',
-  gender: '',
-  model: '',
-  cargo: '',
-  temperature: '',
-}
 
 ListItem.propTypes = {
   name: PropTypes.string.isRequired,
