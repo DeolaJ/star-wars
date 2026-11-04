@@ -24,34 +24,34 @@ Star Wars fans who want a quick, good-looking way to look things up, and develop
 
 ## Built with
 
-- [React 16](https://reactjs.org) (Create React App)
-- [Redux](https://redux.js.org) with Redux Thunk for data fetching
-- [React Router](https://reactrouter.com)
-- [Sass](https://sass-lang.com) and React Reveal for styles and animation
+- [React 18](https://react.dev) with [Vite](https://vitejs.dev)
+- [Redux Toolkit](https://redux-toolkit.js.org) with thunks for data fetching
+- [React Router 6](https://reactrouter.com)
+- [Sass](https://sass-lang.com) for styles
 - [SWAPI](https://swapi.dev) for data
 - Hosted on [Netlify](https://www.netlify.com)
 
 ## Getting started
 
-You need Node.js and Yarn. react-scripts 3 needs an older Node.js, such as Node 12 or 14; upgrading it is on the [roadmap](ROADMAP.md).
+You need Node.js 18 or newer.
 
     git clone https://github.com/DeolaJ/star-wars.git
     cd star-wars
-    yarn install
+    npm install
 
 No API keys or environment variables are needed.
 
 ### Development
 
-    yarn start
+    npm start
 
-### Tests
+### Linting
 
-    yarn test
+    npm run lint
 
 ### Production build
 
-    yarn build
+    npm run build
 
 ## Roadmap
 

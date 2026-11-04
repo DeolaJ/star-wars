@@ -4,11 +4,11 @@ A rough plan for the work ahead. Estimates are approximate.
 
 ## Dependency upgrades (about 8 hours)
 
-- [ ] Move from Create React App 3 to Vite
-- [ ] React 16 to React 18, React Router 5 to 6
-- [ ] Redux to Redux Toolkit, or React Query for server state
-- [ ] Replace `node-sass` with `sass` and drop the unmaintained `react-reveal`
-- [ ] Only include `redux-logger` in development builds
+- [x] Move from Create React App 3 to Vite
+- [x] React 16 to React 18, React Router 5 to 6
+- [x] Redux to Redux Toolkit (`configureStore`); React Query for server state can come later
+- [x] Replace `node-sass` with `sass` and drop the unmaintained `react-reveal`
+- [x] Only include `redux-logger` in development builds
 
 ## Data and performance (about 5 hours)
 

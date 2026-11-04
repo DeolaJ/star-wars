@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
-import { Switch, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import './styles/main.scss';
 import Home from './components/home';
 import Planets from './components/planets';
@@ -45,11 +45,10 @@ class App extends PureComponent {
     }
 
     return (
-      <Switch>
-        <Route exact path="/"
-          render={props => (
+      <Routes>
+        <Route path="/"
+          element={
             <Home
-              {...props}
               characters={characters}
               planets={planets}
               starships={starships}
@@ -66,12 +65,11 @@ class App extends PureComponent {
               doSearchAll={doSearchAll}
               resetSearchAll={resetSearchAll}
             />
-          )}
+          }
         />
         <Route path="/planets"
-          render={props => (
+          element={
             <Planets
-              {...props}
               planets={planets}
               loadingPlanetsError={loadingPlanetsError}
               allFilteredPlanets={allFilteredPlanets}
@@ -82,12 +80,11 @@ class App extends PureComponent {
               doSearchAll={doSearchAll}
               resetSearchAll={resetSearchAll}
             />
-          )}
+          }
         />
         <Route path="/characters"
-          render={props => (
+          element={
             <Characters
-              {...props}
               characters={characters}
               loadingCharactersError={loadingCharactersError}
               allFilteredCharacters={allFilteredCharacters}
@@ -98,12 +95,11 @@ class App extends PureComponent {
               doSearchAll={doSearchAll}
               resetSearchAll={resetSearchAll}
             />
-          )}
+          }
         />
         <Route path="/starships"
-          render={props => (
+          element={
             <Starships
-              {...props}
               starships={starships}
               loadingStarshipsError={loadingStarshipsError}
               allFilteredStarships={allFilteredStarships}
@@ -114,12 +110,11 @@ class App extends PureComponent {
               doSearchAll={doSearchAll}
               resetSearchAll={resetSearchAll}
             />
-          )}
+          }
         />
         <Route path="/description/:category/:id"
-          render={props => (
+          element={
             <Description
-              {...props}
               characters={characters}
               planets={planets}
               starships={starships}
@@ -131,9 +126,9 @@ class App extends PureComponent {
               descriptionItem={descriptionItem}
               doSetDescription={doSetDescription}
             />
-          )}
+          }
         />
-      </Switch>
+      </Routes>
     );
   };
 };

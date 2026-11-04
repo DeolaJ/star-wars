@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import isEmpty from 'lodash/isEmpty';
-import { Link, useHistory } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import Hero from './partials/hero';
 import Layout from './layout';
 import Character1 from '../assets/character-1.jpg';
@@ -22,10 +22,10 @@ import RightChevron from '../assets/chevron-right.svg';
 import LeftChevron from '../assets/chevron-left.svg';
 
 const Description = ({
-  match, recentlyViewed, descriptionItem, doSetDescription, 
+  recentlyViewed, descriptionItem, doSetDescription, 
   setRecentlyViewed
 }) => {
-  const { category, id } = match.params;
+  const { category, id } = useParams();
   const [currentIndex, setCurrentIndex] = useState(recentlyViewed[category].length - 1)
   const [currentNegIndex, setCurrentNegIndex] = useState(0)
   const [imageLink, setImageLink] = useState('');
@@ -75,17 +75,17 @@ const Description = ({
     }
   }, [category, setRecentlyViewed, descriptionItem])
 
-  const history = useHistory();
+  const navigate = useNavigate();
   const navigateNext = () => {
     const newName = recentlyViewed[category][currentNegIndex].name.toLowerCase();
-    history.push(nextLink)
+    navigate(nextLink)
     doSetDescription(category, newName);
     setCurrentNegIndex(currentNegIndex + 1);
   };
   
   const navigatePrevious = () => {
     const newName = recentlyViewed[category][currentIndex - 1].name.toLowerCase();
-    history.push(previousLink)
+    navigate(previousLink)
     doSetDescription(category, newName);
   }
 
@@ -140,7 +140,6 @@ const Description = ({
 };
 
 Description.propTypes = {
-  match: PropTypes.object.isRequired,
   descriptionItem: PropTypes.object.isRequired,
   recentlyViewed: PropTypes.object.isRequired,
   doSetDescription: PropTypes.func.isRequired,

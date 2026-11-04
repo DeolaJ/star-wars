@@ -1,5 +1,6 @@
+import React from 'react'
 import { connect } from 'react-redux'
-import { withRouter } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import appActions from './app/actions'
 import App from './App';
 
@@ -72,4 +73,9 @@ const mapDispatchToProps = (dispatch) => ({
 
 // Link the Reducer state and Action creators to the App Component
 const ConnectedApp = connect (mapStateToProps, mapDispatchToProps)(App)
-export default withRouter(ConnectedApp)
+
+// React Router 6 removed withRouter; supply the location prop via the hook instead
+export default function ConnectedAppWithLocation(props) {
+  const location = useLocation()
+  return <ConnectedApp {...props} location={location} />
+}

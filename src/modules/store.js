@@ -1,13 +1,14 @@
-import { applyMiddleware, createStore } from 'redux'
-import thunkMiddleware from 'redux-thunk'
-import combinedReducer from '../combinedReducer'
-import logger from 'redux-logger'
+import { configureStore } from '@reduxjs/toolkit';
+import logger from 'redux-logger';
+import app from '../app/reducers';
 
-export default function configureStore(persistedState) {
-    const store = createStore(
-        combinedReducer,
-        persistedState,
-        applyMiddleware(logger, thunkMiddleware)
-    )
-    return store;   
+export default function configureAppStore(preloadedState) {
+  return configureStore({
+    reducer: { app },
+    preloadedState,
+    middleware: (getDefaultMiddleware) =>
+      import.meta.env.DEV
+        ? getDefaultMiddleware({ serializableCheck: false }).concat(logger)
+        : getDefaultMiddleware({ serializableCheck: false }),
+  });
 }
