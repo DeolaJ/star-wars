@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -192,5 +192,37 @@ describe('App', () => {
     renderApp('/description/planets/extra_planet_2');
     expect(await screen.findByRole('heading', { level: 1, name: 'Extra Planet 2' })).toBeInTheDocument();
     expect(fetchedUrls(fetchSpy)).not.toContain(page('planets', 2));
+  });
+
+  describe('revisiting the app', () => {
+    it('renders from the cache without any requests', async () => {
+      const fetchSpy = mockFetch();
+      renderApp('/characters');
+      await screen.findByText('Starwars Characters');
+      await userEvent.click(screen.getByRole('button', { name: '2' }));
+      await screen.findByText('Extra Person 1');
+      cleanup();
+      fetchSpy.mockClear();
+
+      // A new visit: fresh store, same browser storage
+      renderApp('/characters');
+      expect(await screen.findByText('Luke Skywalker')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: '2' }));
+      expect(await screen.findByText('Extra Person 1')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /^\d+$/ })).toHaveLength(2);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows the error again rather than a cached failure', async () => {
+      const fetchSpy = mockFetch({ [page('planets', 1)]: new Error('Network down') });
+      renderApp('/planets');
+      await screen.findByText(/There was an error while loading Star Wars Planets/);
+      cleanup();
+      fetchSpy.mockRestore();
+      mockFetch();
+
+      renderApp('/planets');
+      expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+    });
   });
 });

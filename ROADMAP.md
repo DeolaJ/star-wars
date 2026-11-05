@@ -14,7 +14,7 @@ A rough plan for the work ahead. Estimates are approximate.
 
 - [ ] Move the hard-coded `swapi.dev` URLs into one config value, with a fallback mirror when the API is down
 - [x] Load pages on demand instead of fetching every page of results up front
-- [ ] Cache responses between visits
+- [x] Cache responses between visits (localStorage, 24-hour expiry)
 - [ ] Lazy-load images and serve them as WebP
 
 ## Features (about 6 hours)

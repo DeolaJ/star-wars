@@ -6,6 +6,10 @@ import './index.css';
 import App from './connect-App';
 import configureAppStore from './modules/store';
 import { defaultState } from './app/reducers';
+import { pruneCache } from './app/cache';
+
+// Drop expired API responses saved on earlier visits
+pruneCache();
 
 const initialState = {
   app: {

@@ -253,3 +253,210 @@ describe('description', () => {
     expect(store.getState().app.descriptionItem).toEqual({});
   });
 });
+
+describe('caching between visits', () => {
+  const T0 = 1_700_000_000_000;
+  const DAY = 24 * 60 * 60 * 1000;
+  const at = (time) => vi.spyOn(Date, 'now').mockReturnValue(time);
+
+  it('serves a page from the cache on the next visit without a request', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doFetchCharactersPage(2));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchCharactersPage(2));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const state = revisit.getState().app;
+    expect(state.charactersPaging.pages[2]).toHaveLength(5);
+    expect(state.charactersPaging.count).toBe(15);
+  });
+
+  it('keeps the first page cached too, so a revisit needs no startup requests', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    const first = makeStore();
+    await Promise.all([actions.doFetchCharacters(), actions.doFetchPlanets(), actions.doFetchStarships()].map(first.dispatch));
+    fetchSpy.mockClear();
+
+    const revisit = makeStore();
+    await Promise.all([actions.doFetchCharacters(), actions.doFetchPlanets(), actions.doFetchStarships()].map(revisit.dispatch));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(revisit.getState().app.loadingCharacters).toBe(false);
+    expect(revisit.getState().app.recentlyViewed.planets).toHaveLength(9);
+  });
+
+  it('requests a page again once the cached copy has expired, and refreshes the cache', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doFetchPlanets());
+
+    at(T0 + DAY - 1);
+    await makeStore().dispatch(actions.doFetchPlanets());
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    at(T0 + DAY);
+    await makeStore().dispatch(actions.doFetchPlanets());
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    // The new copy is good for another day from when it was fetched
+    at(T0 + DAY + DAY - 1);
+    await makeStore().dispatch(actions.doFetchPlanets());
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['a network error', new Error('Network down')],
+    ['an incomplete body', { next: null }],
+    ['a body without results', { count: 3, results: null }],
+  ])('does not cache a page that failed with %s', async (_, failure) => {
+    const url = page('starships', 1);
+    const fetchSpy = mockFetch({ [url]: failure });
+    const store = makeStore();
+    await store.dispatch(actions.doFetchStarships());
+    expect(store.getState().app.loadingStarshipsError.message).toBeTruthy();
+
+    fetchSpy.mockRestore();
+    const retrySpy = mockFetch();
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchStarships());
+
+    expect(fetchedUrls(retrySpy)).toEqual([url]);
+    expect(revisit.getState().app.starshipsPaging.pages[1]).toHaveLength(10);
+  });
+
+  it('does not cache an HTTP error response', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 500, json: async () => ({ results: [], count: 0 }) });
+    await makeStore().dispatch(actions.doFetchCharacters());
+
+    fetchSpy.mockRestore();
+    const retrySpy = mockFetch();
+    await makeStore().dispatch(actions.doFetchCharacters());
+    expect(retrySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves a search from the cache on the next visit, whatever the letter case', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doSearchCharacters('Extra'));
+
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doSearchCharacters('extra'));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(revisit.getState().app.allFilteredCharacters).toHaveLength(5);
+  });
+
+  it('shares cached searches with the home search', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doSearchAll('wing'));
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doSearchStarships('wing'));
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(revisit.getState().app.allFilteredStarships.map(s => s.name)).toEqual(['X-wing']);
+  });
+
+  it('searches the API again after the cached result expires', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doSearchPlanets('tatoo'));
+    at(T0 + DAY);
+    await makeStore().dispatch(actions.doSearchPlanets('tatoo'));
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache a search that fails part way through its pages', async () => {
+    const term = 'person';
+    const base = `${API_ENDPOINTS.characters}?search=${term}`;
+    const fetchSpy = mockFetch({
+      [base]: { count: 3, next: `${base}&page=2`, results: [{ name: 'Person 1' }, { name: 'Person 2' }] },
+      [`${base}&page=2`]: new Error('Timeout'),
+    });
+    const store = makeStore();
+    await store.dispatch(actions.doSearchCharacters(term));
+    // A failed search shows no results, as before, and is not stored in memory either
+    expect(store.getState().app.allFilteredCharacters).toEqual([]);
+    expect(store.getState().app.charactersSearch).not.toHaveProperty(term);
+
+    fetchSpy.mockRestore();
+    const retrySpy = mockFetch({
+      [base]: { count: 3, next: `${base}&page=2`, results: [{ name: 'Person 1' }, { name: 'Person 2' }] },
+      [`${base}&page=2`]: { count: 3, next: null, results: [{ name: 'Person 3' }] },
+    });
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doSearchCharacters(term));
+    expect(retrySpy).toHaveBeenCalledTimes(2);
+    expect(revisit.getState().app.allFilteredCharacters).toHaveLength(3);
+  });
+
+  it('retries a failed search in the same visit instead of remembering the failure', async () => {
+    const fetchSpy = mockFetch({ [`${API_ENDPOINTS.planets}?search=tatoo`]: new Error('Down') });
+    const store = makeStore();
+    await store.dispatch(actions.doSearchPlanets('tatoo'));
+    expect(store.getState().app.allFilteredPlanets).toEqual([]);
+
+    fetchSpy.mockRestore();
+    mockFetch();
+    await store.dispatch(actions.resetSearchPlanets());
+    await store.dispatch(actions.doSearchPlanets('tatoo'));
+    expect(store.getState().app.allFilteredPlanets.map(p => p.name)).toEqual(['Tatooine']);
+  });
+
+  it('only remembers the categories of a home search that succeeded', async () => {
+    mockFetch({ [`${API_ENDPOINTS.characters}?search=wing`]: new Error('Down') });
+    const store = makeStore();
+    await store.dispatch(actions.doSearchAll('wing'));
+
+    const { charactersSearch, starshipsSearch } = store.getState().app;
+    expect(charactersSearch).not.toHaveProperty('wing');
+    expect(starshipsSearch.wing.map(s => s.name)).toEqual(['X-wing']);
+  });
+
+  it('uses a cached search for a description URL on the next visit', async () => {
+    at(T0);
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doSetDescription('characters', 'extra person 3'));
+    fetchSpy.mockClear();
+
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doSetDescription('characters', 'extra person 3'));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(revisit.getState().app.descriptionItem.category.name).toBe('Extra Person 3');
+  });
+
+  it('does not let a slow older request overwrite a newer cached page', async () => {
+    // Two visits (for example two tabs) load the same page. The first request is
+    // slow and returns older data after the second has already been saved.
+    const url = page('planets', 2);
+    let releaseOld;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((requested) => {
+      if (requested !== url) throw new Error(`Unexpected fetch: ${requested}`);
+      if (!releaseOld) {
+        return new Promise(resolve => {
+          releaseOld = () => resolve({ ok: true, json: async () => ({ count: 13, results: [{ name: 'Old Planet' }] }) });
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ count: 13, results: [{ name: 'New Planet' }] }) });
+    });
+    const now = at(T0);
+    const oldVisit = makeStore().dispatch(actions.doFetchPlanetsPage(2));
+    now.mockReturnValue(T0 + 1000);
+    await makeStore().dispatch(actions.doFetchPlanetsPage(2));
+    now.mockReturnValue(T0 + 2000);
+    releaseOld();
+    await oldVisit;
+
+    vi.mocked(globalThis.fetch).mockClear();
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchPlanetsPage(2));
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(revisit.getState().app.planetsPaging.pages[2].map(p => p.name)).toEqual(['New Planet']);
+  });
+});

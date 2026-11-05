@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from '../config';
+import { getCached, setCached } from './cache';
 
 export const FETCH_PAGE_START = "FETCH_PAGE_START";
 export const FETCH_PAGE_SUCCESS = "FETCH_PAGE_SUCCESS";
@@ -86,6 +87,28 @@ const getJSON = (url) => fetch(url).then(response => {
   return response.json();
 });
 
+// A response is only used, and cached, if it has the shape SWAPI returns.
+// Anything else (an HTML error page, a truncated body) is treated as a failure.
+const assertResults = (body, needsCount) => {
+  const complete = body && Array.isArray(body.results) && (!needsCount || typeof body.count === 'number');
+  if (!complete) {
+    throw new Error('Incomplete response from the API');
+  }
+  return body;
+};
+
+// Pages come from the cache when a fresh copy exists, otherwise from the API.
+// Only successful, complete responses are saved.
+const getPage = async (url) => {
+  const cached = getCached(url);
+  if (cached) return cached;
+  const requestedAt = Date.now();
+  const body = assertResults(await getJSON(url), true);
+  const page = { count: body.count, results: body.results };
+  setCached(url, page, requestedAt);
+  return page;
+};
+
 // Loading Action Creators
 // SWAPI returns 10 results per page, which matches the page size of the list pages,
 // so a page of the UI is exactly one request.
@@ -97,7 +120,7 @@ export const doFetchPage = (resource, page) => (dispatch, getState) => {
   }
   dispatch(fetchPageStart({ resource, page }));
 
-  return getJSON(`${API_ENDPOINTS[resource]}?page=${page}`)
+  return getPage(`${API_ENDPOINTS[resource]}?page=${page}`)
   .then(response => {
     dispatch(fetchPageSuccess({
       resource,
@@ -126,16 +149,25 @@ export const doFetchStarshipsPage = (page) => doFetchPage('starships', page);
 // Search runs against the API so it covers every page, not only the loaded ones.
 // SWAPI also matches starship models, so results are narrowed to name matches
 // to keep the previous behaviour.
+// The finished result of a search is cached as one entry, and only once every
+// page of it has loaded, so a search that fails part way is never stored.
 const fetchSearchResults = async (resource, param) => {
   const filter = param.toLowerCase();
+  const cacheKey = `search:${resource}:${filter}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const requestedAt = Date.now();
   let results = [];
   let next = `${API_ENDPOINTS[resource]}?search=${encodeURIComponent(param)}`;
   while (next) {
-    const response = await getJSON(next);
+    const response = assertResults(await getJSON(next), false);
     results = [...results, ...response.results];
     next = response.next;
   }
-  return results.filter(item => item.name.toLowerCase().includes(filter));
+  const matches = results.filter(item => item.name.toLowerCase().includes(filter));
+  setCached(cacheKey, matches, requestedAt);
+  return matches;
 };
 
 const getSearchResults = (state, resource, param) => {
@@ -149,16 +181,20 @@ const latestSearch = {};
 const searchResource = (resource, param, actionCreator, filteringKey) => async (dispatch, getState) => {
   latestSearch[resource] = param;
   let results;
+  let failed = false;
   try {
     results = await getSearchResults(getState(), resource, param);
   } catch {
+    // Shown as no results, as before, but not remembered so it can be retried
     results = [];
+    failed = true;
   }
   if (latestSearch[resource] !== param) return;
   return dispatch(actionCreator({
     [resource]: results,
     param,
     [filteringKey]: true,
+    failed,
   }))
 };
 
@@ -170,9 +206,13 @@ export const doSearchStarships = (param) => searchResource('starships', param, s
 export const doSearchAll = (param) => async (dispatch, getState) => {
   latestSearch.all = param;
   const state = getState();
+  const failed = {};
   const [characters, planets, starships] = await Promise.all(
     ['characters', 'planets', 'starships'].map(resource => (
-      getSearchResults(state, resource, param).catch(() => [])
+      getSearchResults(state, resource, param).catch(() => {
+        failed[resource] = true;
+        return [];
+      })
     ))
   );
   if (latestSearch.all !== param) return;
@@ -182,6 +222,7 @@ export const doSearchAll = (param) => async (dispatch, getState) => {
     planets,
     starships,
     isFilteringAll: true,
+    failed,
   }))
 }
 

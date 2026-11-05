@@ -155,7 +155,9 @@ export default function appReducers (state=defaultState, action) {
         }
       } else {
         allFilteredCharacters = characters;
-        charactersSearch[param] = allFilteredCharacters;
+        if (!payload.failed) {
+          charactersSearch[param] = allFilteredCharacters;
+        }
 
         return {
           ...state,
@@ -182,7 +184,9 @@ export default function appReducers (state=defaultState, action) {
         }
       } else {
         allFilteredPlanets = planets;
-        planetsSearch[param] = allFilteredPlanets;
+        if (!payload.failed) {
+          planetsSearch[param] = allFilteredPlanets;
+        }
 
         return {
           ...state,
@@ -209,7 +213,9 @@ export default function appReducers (state=defaultState, action) {
         }
       } else {
         allFilteredStarships = starships;
-        starshipsSearch[param] = allFilteredStarships;
+        if (!payload.failed) {
+          starshipsSearch[param] = allFilteredStarships;
+        }
 
         return {
           ...state,
@@ -233,7 +239,9 @@ export default function appReducers (state=defaultState, action) {
         allFilteredCharacters = charactersSearch[param];
       } else {
         allFilteredCharacters = payload.characters;
-        charactersSearch[param] = allFilteredCharacters;
+        if (!(payload.failed && payload.failed.characters)) {
+          charactersSearch[param] = allFilteredCharacters;
+        }
       }
 
       // Search Starships
@@ -241,7 +249,9 @@ export default function appReducers (state=defaultState, action) {
         allFilteredStarships = starshipsSearch[param];
       } else {
         allFilteredStarships = payload.starships;
-        starshipsSearch[param] = allFilteredStarships;
+        if (!(payload.failed && payload.failed.starships)) {
+          starshipsSearch[param] = allFilteredStarships;
+        }
       }
 
       // Search Planets
@@ -249,7 +259,9 @@ export default function appReducers (state=defaultState, action) {
         allFilteredPlanets = planetsSearch[param];
       } else {
         allFilteredPlanets = payload.planets;
-        planetsSearch[param] = allFilteredPlanets;
+        if (!(payload.failed && payload.failed.planets)) {
+          planetsSearch[param] = allFilteredPlanets;
+        }
       }
 
       return {
