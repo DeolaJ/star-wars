@@ -1,4 +1,5 @@
-import { API_ENDPOINTS } from '../config';
+import { API_BASE_URL, API_PATHS } from '../config';
+import { fetchFromAPI, toApiPath } from './api';
 import { getCached, setCached } from './cache';
 
 export const FETCH_PAGE_START = "FETCH_PAGE_START";
@@ -80,13 +81,6 @@ const setDescription = (payload) => ({
   payload,
 })
 
-const getJSON = (url) => fetch(url).then(response => {
-  if (response.ok === false) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  return response.json();
-});
-
 // A response is only used, and cached, if it has the shape SWAPI returns.
 // Anything else (an HTML error page, a truncated body) is treated as a failure.
 const assertResults = (body, needsCount) => {
@@ -97,15 +91,17 @@ const assertResults = (body, needsCount) => {
   return body;
 };
 
-// Pages come from the cache when a fresh copy exists, otherwise from the API.
-// Only successful, complete responses are saved.
-const getPage = async (url) => {
-  const cached = getCached(url);
+// Pages come from the cache when a fresh copy exists, otherwise from the API
+// (swapi.dev, or the mirror if it fails). Only complete responses are saved,
+// keyed by the swapi.dev URL whichever server answered.
+const getPage = async (path) => {
+  const cacheKey = `${API_BASE_URL}/${path}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
   const requestedAt = Date.now();
-  const body = assertResults(await getJSON(url), true);
+  const body = await fetchFromAPI(path, response => assertResults(response, true));
   const page = { count: body.count, results: body.results };
-  setCached(url, page, requestedAt);
+  setCached(cacheKey, page, requestedAt);
   return page;
 };
 
@@ -120,7 +116,7 @@ export const doFetchPage = (resource, page) => (dispatch, getState) => {
   }
   dispatch(fetchPageStart({ resource, page }));
 
-  return getPage(`${API_ENDPOINTS[resource]}?page=${page}`)
+  return getPage(`${API_PATHS[resource]}?page=${page}`)
   .then(response => {
     dispatch(fetchPageSuccess({
       resource,
@@ -159,11 +155,13 @@ const fetchSearchResults = async (resource, param) => {
 
   const requestedAt = Date.now();
   let results = [];
-  let next = `${API_ENDPOINTS[resource]}?search=${encodeURIComponent(param)}`;
-  while (next) {
-    const response = assertResults(await getJSON(next), false);
+  let path = `${API_PATHS[resource]}?search=${encodeURIComponent(param)}`;
+  while (path) {
+    const response = await fetchFromAPI(path, body => assertResults(body, false));
     results = [...results, ...response.results];
-    next = response.next;
+    // The next link points at whichever server answered; follow it as a path
+    // so a later page can still fall back
+    path = response.next ? toApiPath(response.next) : null;
   }
   const matches = results.filter(item => item.name.toLowerCase().includes(filter));
   setCached(cacheKey, matches, requestedAt);

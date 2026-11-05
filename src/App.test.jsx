@@ -8,7 +8,7 @@ import App from './connect-App';
 import configureAppStore from './modules/store';
 import { defaultState } from './app/reducers';
 import { API_ENDPOINTS } from './config';
-import { mockFetch, fetchedUrls } from './test/fixtures';
+import { mockFetch, fetchedUrls, mirrorUrl } from './test/fixtures';
 
 const renderApp = (route = '/') => {
   const store = configureAppStore({ app: { ...defaultState } });
@@ -223,6 +223,53 @@ describe('App', () => {
 
       renderApp('/planets');
       expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+    });
+  });
+
+  describe('when swapi.dev is down', () => {
+    it('loads the app, pages and search from the mirror', async () => {
+      const fetchSpy = mockFetch({}, { down: ['primary'] });
+      renderApp('/characters');
+      expect(await screen.findByText('Luke Skywalker')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: '2' }));
+      expect(await screen.findByText('Extra Person 1')).toBeInTheDocument();
+      expect(fetchedUrls(fetchSpy)).toContain(mirrorUrl(page('characters', 2)));
+
+      await userEvent.type(screen.getAllByPlaceholderText('Enter a search item')[1], 'leia');
+      expect(await screen.findByText('CHARACTERS Results', {}, { timeout: 4000 })).toBeInTheDocument();
+      expect(screen.getByText('Leia Organa')).toBeInTheDocument();
+    }, 10000);
+
+    it('opens a description URL through the mirror', async () => {
+      mockFetch({}, { down: ['primary'] });
+      renderApp('/description/starships/extra_starship_2');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Extra Starship 2' })).toBeInTheDocument();
+    });
+  });
+
+  describe('when both servers are down', () => {
+    it('shows the existing error message', async () => {
+      mockFetch({}, { down: ['primary', 'mirror'] });
+      renderApp('/planets');
+      expect(await screen.findByText('There was an error while loading Star Wars Planets: Failed to fetch')).toBeInTheDocument();
+    });
+
+    it('shows the page error and loads the page when it is opened again after recovery', async () => {
+      const healthy = mockFetch();
+      renderApp('/starships');
+      await screen.findByText('Starwars Starships');
+      healthy.mockRestore();
+
+      const offline = mockFetch({}, { down: ['primary', 'mirror'] });
+      await userEvent.click(screen.getByRole('button', { name: '2' }));
+      expect(await screen.findByText('There was an error while loading page 2: Failed to fetch')).toBeInTheDocument();
+
+      offline.mockRestore();
+      mockFetch({}, { down: ['primary'] });
+      await userEvent.click(screen.getByRole('button', { name: '1' }));
+      await userEvent.click(screen.getByRole('button', { name: '2' }));
+      expect(await screen.findByText('Extra Starship 1')).toBeInTheDocument();
     });
   });
 });

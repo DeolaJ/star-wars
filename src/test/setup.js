@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { resetApiState } from '../app/api';
 
 // Recent Node versions ship their own experimental localStorage global, which
 // hides jsdom's and is undefined unless Node is given a storage file. Provide an
@@ -23,4 +24,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   // Each test starts without responses cached by earlier tests
   localStorage.clear();
+  // Forget which API server failed in the previous test
+  resetApiState();
 });

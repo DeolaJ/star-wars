@@ -28,7 +28,7 @@ Star Wars fans who want a quick, good-looking way to look things up, and develop
 - [Redux Toolkit](https://redux-toolkit.js.org) with thunks for data fetching
 - [React Router 6](https://reactrouter.com)
 - [Sass](https://sass-lang.com) for styles
-- [SWAPI](https://swapi.dev) for data
+- [SWAPI](https://swapi.dev) for data, with [swapi.py4e.com](https://swapi.py4e.com) as a fallback mirror
 - Hosted on [Netlify](https://www.netlify.com)
 
 ## Getting started

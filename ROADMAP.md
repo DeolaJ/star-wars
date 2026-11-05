@@ -12,7 +12,7 @@ A rough plan for the work ahead. Estimates are approximate.
 
 ## Data and performance (about 5 hours)
 
-- [ ] Move the hard-coded `swapi.dev` URLs into one config value, with a fallback mirror when the API is down
+- [x] Move the hard-coded `swapi.dev` URLs into one config value, with a fallback mirror (`swapi.py4e.com`) when the API is down
 - [x] Load pages on demand instead of fetching every page of results up front
 - [x] Cache responses between visits (localStorage, 24-hour expiry)
 - [ ] Lazy-load images and serve them as WebP

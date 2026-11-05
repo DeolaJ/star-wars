@@ -3,7 +3,7 @@ import configureAppStore from '../modules/store';
 import { defaultState } from './reducers';
 import actions from './actions';
 import { API_ENDPOINTS } from '../config';
-import { mockFetch, fetchedUrls } from '../test/fixtures';
+import { mockFetch, fetchedUrls, mirrorUrl } from '../test/fixtures';
 
 const makeStore = () => configureAppStore({ app: { ...defaultState } });
 const page = (resource, n) => `${API_ENDPOINTS[resource]}?page=${n}`;
@@ -324,7 +324,8 @@ describe('caching between visits', () => {
     const revisit = makeStore();
     await revisit.dispatch(actions.doFetchStarships());
 
-    expect(fetchedUrls(retrySpy)).toEqual([url]);
+    // One request for the page; swapi.dev failed moments ago, so the mirror goes first
+    expect(fetchedUrls(retrySpy)).toEqual([mirrorUrl(url)]);
     expect(revisit.getState().app.starshipsPaging.pages[1]).toHaveLength(10);
   });
 
@@ -458,5 +459,156 @@ describe('caching between visits', () => {
     await revisit.dispatch(actions.doFetchPlanetsPage(2));
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(revisit.getState().app.planetsPaging.pages[2].map(p => p.name)).toEqual(['New Planet']);
+  });
+});
+
+describe('fallback API', () => {
+  const mirrorPage = (resource, n) => mirrorUrl(page(resource, n));
+
+  it('loads the first page from the mirror when swapi.dev is down', async () => {
+    const fetchSpy = mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchCharacters());
+
+    const state = store.getState().app;
+    expect(fetchedUrls(fetchSpy)).toEqual([page('characters', 1), mirrorPage('characters', 1)]);
+    expect(state.loadingCharacters).toBe(false);
+    expect(state.loadingCharactersError).toEqual({});
+    expect(state.charactersPaging.pages[1]).toHaveLength(10);
+    expect(state.charactersPaging.count).toBe(15);
+  });
+
+  it('loads later pages from the mirror, going straight to it once swapi.dev has failed', async () => {
+    const fetchSpy = mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+    await store.dispatch(actions.doFetchPlanets());
+    fetchSpy.mockClear();
+
+    await store.dispatch(actions.doFetchPlanetsPage(2));
+
+    expect(fetchedUrls(fetchSpy)).toEqual([mirrorPage('planets', 2)]);
+    expect(store.getState().app.planetsPaging.pages[2]).toHaveLength(3);
+  });
+
+  it('searches through the mirror when swapi.dev is down', async () => {
+    mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doSearchCharacters('extra'));
+
+    expect(store.getState().app.allFilteredCharacters).toHaveLength(5);
+    expect(store.getState().app.isFilteringCharacters).toBe(true);
+  });
+
+  it('follows search pages across servers when swapi.dev fails part way', async () => {
+    const term = 'person';
+    const path = `people/?search=${term}`;
+    const fetchSpy = mockFetch({
+      [`${API_ENDPOINTS.characters}?search=${term}`]: { count: 3, next: `${API_ENDPOINTS.characters}?search=${term}&page=2`, results: [{ name: 'Person 1' }, { name: 'Person 2' }] },
+      [`${API_ENDPOINTS.characters}?search=${term}&page=2`]: new Error('Down'),
+      [mirrorUrl(`${API_ENDPOINTS.characters}?search=${term}&page=2`)]: { count: 3, next: null, results: [{ name: 'Person 3' }] },
+    });
+    const store = makeStore();
+
+    await store.dispatch(actions.doSearchCharacters(term));
+
+    expect(store.getState().app.allFilteredCharacters.map(c => c.name)).toEqual(['Person 1', 'Person 2', 'Person 3']);
+    expect(fetchedUrls(fetchSpy).map(url => url.replace(/^https:\/\/[^/]+\/api\//, ''))).toEqual([path, `${path}&page=2`, `${path}&page=2`]);
+  });
+
+  it('follows next links that point at the mirror', async () => {
+    const term = 'person';
+    const mirrorBase = mirrorUrl(`${API_ENDPOINTS.characters}?search=${term}`);
+    mockFetch({
+      [mirrorBase]: { count: 3, next: `${mirrorBase}&page=2`, results: [{ name: 'Person 1' }, { name: 'Person 2' }] },
+      [`${mirrorBase}&page=2`]: { count: 3, next: null, results: [{ name: 'Person 3' }] },
+    }, { down: ['primary'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doSearchCharacters(term));
+
+    expect(store.getState().app.allFilteredCharacters).toHaveLength(3);
+  });
+
+  it('finds a description item through the mirror', async () => {
+    mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doSetDescription('planets', 'extra planet 2'));
+
+    expect(store.getState().app.descriptionItem.category.name).toBe('Extra Planet 2');
+  });
+
+  it('shows the initial load error when both servers are down, and caches nothing', async () => {
+    const fetchSpy = mockFetch({}, { down: ['primary', 'mirror'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchStarships());
+
+    const state = store.getState().app;
+    expect(fetchedUrls(fetchSpy)).toEqual([page('starships', 1), mirrorPage('starships', 1)]);
+    expect(state.loadingStarships).toBe(false);
+    expect(state.loadingStarshipsError.message).toBe('Failed to fetch');
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('records a page error when both servers are down and recovers on retry', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchCharacters());
+    fetchSpy.mockRestore();
+
+    mockFetch({}, { down: ['primary', 'mirror'] });
+    await store.dispatch(actions.doFetchCharactersPage(2));
+    expect(store.getState().app.charactersPaging.errors[2].message).toBe('Failed to fetch');
+    expect(store.getState().app.loadingCharactersError).toEqual({});
+
+    vi.mocked(globalThis.fetch).mockRestore();
+    mockFetch({}, { down: ['primary'] });
+    await store.dispatch(actions.doFetchCharactersPage(2));
+    expect(store.getState().app.charactersPaging.errors[2]).toBeUndefined();
+    expect(store.getState().app.charactersPaging.pages[2]).toHaveLength(5);
+  });
+
+  it('shows no results for a search when both servers are down, and does not remember it', async () => {
+    mockFetch({}, { down: ['primary', 'mirror'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doSearchPlanets('tatoo'));
+
+    expect(store.getState().app.allFilteredPlanets).toEqual([]);
+    expect(store.getState().app.planetsSearch).not.toHaveProperty('tatoo');
+  });
+
+  it('caches mirror responses under the swapi.dev URL, so a later visit uses them', async () => {
+    const fetchSpy = mockFetch({}, { down: ['primary'] });
+    await makeStore().dispatch(actions.doFetchPlanetsPage(2));
+    await makeStore().dispatch(actions.doSearchStarships('wing'));
+    expect(localStorage.getItem(`swapi-cache:v1:${page('planets', 2)}`)).not.toBeNull();
+    fetchSpy.mockClear();
+
+    // swapi.dev is back; cached data is still used without any request
+    fetchSpy.mockRestore();
+    const healthy = mockFetch();
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchPlanetsPage(2));
+    await revisit.dispatch(actions.doSearchStarships('wing'));
+    expect(healthy).not.toHaveBeenCalled();
+    expect(revisit.getState().app.allFilteredStarships.map(s => s.name)).toEqual(['X-wing']);
+  });
+
+  it('serves cached data even when both servers are down', async () => {
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doFetchCharacters());
+    fetchSpy.mockRestore();
+
+    const offline = mockFetch({}, { down: ['primary', 'mirror'] });
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchCharacters());
+
+    expect(offline).not.toHaveBeenCalled();
+    expect(revisit.getState().app.loadingCharactersError).toEqual({});
+    expect(revisit.getState().app.characters).toHaveLength(10);
   });
 });

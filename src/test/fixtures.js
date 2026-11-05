@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { API_ENDPOINTS } from '../config';
+import { API_ENDPOINTS, API_BASE_URL, API_FALLBACK_BASE_URL } from '../config';
 
 const person = (name, gender = 'male') => ({
   name, gender, height: '172', mass: '77', hair_color: 'blond',
@@ -46,9 +46,20 @@ const searchResponse = (url) => {
   return { count: results.length, next: null, previous: null, results };
 };
 
-export const mockFetch = (overrides = {}) => {
+// The mirror serves the same data as swapi.dev. An override keyed by a swapi.dev
+// URL applies to both servers (the API is down everywhere), unless the mirror URL
+// has its own override. `down` makes a whole server unreachable, for example
+// { down: ['primary'] } to simulate swapi.dev being down while the mirror works.
+export const mirrorUrl = (url) => url.replace(API_BASE_URL, API_FALLBACK_BASE_URL);
+
+export const mockFetch = (overrides = {}, { down = [] } = {}) => {
   const table = { ...pages, ...overrides };
-  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (requested) => {
+    const isMirror = requested.startsWith(API_FALLBACK_BASE_URL);
+    if (down.includes(isMirror ? 'mirror' : 'primary')) {
+      throw new TypeError('Failed to fetch');
+    }
+    const url = isMirror && !(requested in table) ? requested.replace(API_FALLBACK_BASE_URL, API_BASE_URL) : requested;
     let body = table[url];
     if (!body && url.includes('?search=')) body = searchResponse(url);
     if (body instanceof Error) throw body;
