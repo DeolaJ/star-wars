@@ -19,22 +19,43 @@ const starship = (name) => ({
 
 const range = (n, fn, prefix) => Array.from({ length: n }, (_, i) => fn(`${prefix} ${i + 1}`));
 
-// Two pages per resource, mirroring how SWAPI paginates with a `next` link
+// Two pages per resource, mirroring how SWAPI paginates with `count` and `next`
+const resource = (endpoint, page1, page2) => {
+  const count = page1.length + page2.length;
+  return {
+    [`${endpoint}?page=1`]: { count, next: `${endpoint}?page=2`, previous: null, results: page1 },
+    [`${endpoint}?page=2`]: { count, next: null, previous: `${endpoint}?page=1`, results: page2 },
+  };
+};
+
 export const pages = {
-  [API_ENDPOINTS.characters]: { next: `${API_ENDPOINTS.characters}?page=2`, results: [person('Luke Skywalker'), person('Leia Organa', 'female'), ...range(8, person, 'Person')] },
-  [`${API_ENDPOINTS.characters}?page=2`]: { next: null, results: range(5, person, 'Extra Person') },
-  [API_ENDPOINTS.planets]: { next: `${API_ENDPOINTS.planets}?page=2`, results: [planet('Tatooine'), ...range(9, planet, 'Planet')] },
-  [`${API_ENDPOINTS.planets}?page=2`]: { next: null, results: range(3, planet, 'Extra Planet') },
-  [API_ENDPOINTS.starships]: { next: `${API_ENDPOINTS.starships}?page=2`, results: [starship('X-wing'), ...range(9, starship, 'Starship')] },
-  [`${API_ENDPOINTS.starships}?page=2`]: { next: null, results: range(2, starship, 'Extra Starship') },
+  ...resource(API_ENDPOINTS.characters, [person('Luke Skywalker'), person('Leia Organa', 'female'), ...range(8, person, 'Person')], range(5, person, 'Extra Person')),
+  ...resource(API_ENDPOINTS.planets, [planet('Tatooine'), ...range(9, planet, 'Planet')], range(3, planet, 'Extra Planet')),
+  ...resource(API_ENDPOINTS.starships, [starship('X-wing'), ...range(9, starship, 'Starship')], range(2, starship, 'Extra Starship')),
+};
+
+const allItems = (endpoint) => Object.entries(pages)
+  .filter(([url]) => url.startsWith(`${endpoint}?page=`))
+  .flatMap(([, body]) => body.results);
+
+// Answers ?search= the way SWAPI does: a case-insensitive name match across every page
+const searchResponse = (url) => {
+  const [endpoint, query] = url.split('?search=');
+  const term = decodeURIComponent(query).toLowerCase();
+  const results = allItems(endpoint).filter(item => item.name.toLowerCase().includes(term));
+  return { count: results.length, next: null, previous: null, results };
 };
 
 export const mockFetch = (overrides = {}) => {
   const table = { ...pages, ...overrides };
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
-    const body = table[url];
+    let body = table[url];
+    if (!body && url.includes('?search=')) body = searchResponse(url);
     if (body instanceof Error) throw body;
     if (!body) throw new Error(`Unexpected fetch: ${url}`);
-    return { json: async () => body };
+    return { ok: true, json: async () => body };
   });
 };
+
+// URLs requested so far, for asserting exactly which pages were fetched
+export const fetchedUrls = (fetchSpy) => fetchSpy.mock.calls.map(([url]) => url);

@@ -4,9 +4,9 @@ import RightChevron from '../../assets/chevron-right.svg';
 import LeftChevron from '../../assets/chevron-left.svg';
 
 const Pagination = ({
-  items, currentPage, resultsPerPage, changeResultPage,
+  totalItems, currentPage, resultsPerPage, changeResultPage,
 }) => {
-  const parts = Math.ceil(items.length / resultsPerPage);
+  const parts = Math.ceil(totalItems / resultsPerPage);
   const pageNumbers = useMemo(() => {
     const pageNumbers = [];
     for (let i = 1; i <= parts; i++) {
@@ -57,7 +57,7 @@ const Pagination = ({
 };
 
 Pagination.propTypes = {
-  items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  totalItems: PropTypes.number.isRequired,
   resultsPerPage: PropTypes.number.isRequired,
   changeResultPage: PropTypes.func.isRequired,
   currentPage: PropTypes.number.isRequired,

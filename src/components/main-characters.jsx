@@ -10,7 +10,7 @@ import ListItem from './partials/list-item';
 import Dropdown from './partials/dropdown';
 
 const MainCharacters = ({
-  characters, loadingCharactersError, doSearchCharacters, resetSearchCharacters,
+  characters, charactersPaging, doFetchCharactersPage, loadingCharactersError, doSearchCharacters, resetSearchCharacters,
   isFilteringCharacters, charactersSearch, allFilteredCharacters,
  }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +46,7 @@ const MainCharacters = ({
   ];
   const recentResultsEndIndex = currentPage * resultsPerPage;
   const firstResultIndex = recentResultsEndIndex - resultsPerPage;
-  let currentCharacters = characters.slice(firstResultIndex, recentResultsEndIndex);
+  let currentCharacters = charactersPaging.pages[currentPage] || [];
 
   // Filter Characters by Gender
   const doFilterGender = (gender) => (
@@ -59,7 +59,7 @@ const MainCharacters = ({
 
   const performSearch = useRef(debounce((searchParams) => {
     if (searchParams.length > 0) {
-      doSearchCharacters(characters, searchParams);
+      doSearchCharacters(searchParams);
     } else {
       resetSearchCharacters()
     }
@@ -74,6 +74,18 @@ const MainCharacters = ({
   });
 
   useEffect(() => performSearch.current(searchParams), [searchParams]);
+
+  // Pages after the first are fetched when the user opens them. Page 1 is the
+  // app's initial load, and retrying it here would loop through the app loader
+  // whenever the API is down.
+  useEffect(() => {
+    if (currentPage > 1) {
+      doFetchCharactersPage(currentPage);
+    }
+  }, [currentPage, doFetchCharactersPage]);
+
+  const pageError = charactersPaging.errors[currentPage];
+  const pageLoading = charactersPaging.loading[currentPage];
   // useEffect(() => updatedFilter.current(characters), [gender, characters]);
 
   return (
@@ -124,6 +136,20 @@ const MainCharacters = ({
               : (
                 <>
                   {
+                    pageError && (
+                      <p>
+                        {`There was an error while loading page ${currentPage}: ${pageError.message}`}
+                      </p>
+                    )
+                  }
+                  {
+                    !pageError && pageLoading && (
+                      <p>
+                        {`Loading page ${currentPage}...`}
+                      </p>
+                    )
+                  }
+                  {
                     currentCharacters.map(character => (
                       <React.Fragment key={character.name}>
                         <ListItem
@@ -137,7 +163,7 @@ const MainCharacters = ({
                     ))
                   }
                   <Pagination
-                    items={characters}
+                    totalItems={charactersPaging.count}
                     resultsPerPage={resultsPerPage}
                     changeResultPage={setCurrentPage}
                     currentPage={currentPage}
@@ -154,6 +180,13 @@ const MainCharacters = ({
 
 MainCharacters.propTypes = {
   characters: PropTypes.arrayOf(PropTypes.object).isRequired,
+  charactersPaging: PropTypes.shape({
+    count: PropTypes.number,
+    pages: PropTypes.object,
+    loading: PropTypes.object,
+    errors: PropTypes.object,
+  }).isRequired,
+  doFetchCharactersPage: PropTypes.func.isRequired,
   loadingCharactersError: PropTypes.object.isRequired,
   doSearchCharacters: PropTypes.func.isRequired,
   resetSearchCharacters: PropTypes.func.isRequired,

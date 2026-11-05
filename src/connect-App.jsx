@@ -7,6 +7,9 @@ import App from './App';
 const mapStateToProps = (state) => ({
   characters: state.app.characters,
   planets: state.app.planets,
+  charactersPaging: state.app.charactersPaging,
+  planetsPaging: state.app.planetsPaging,
+  starshipsPaging: state.app.starshipsPaging,
   starships: state.app.starships,
   loadingStarshipsError: state.app.loadingStarshipsError,
   loadingPlanetsError: state.app.loadingPlanetsError,
@@ -30,26 +33,35 @@ const mapStateToProps = (state) => ({
 })
 
 const mapDispatchToProps = (dispatch) => ({
-  doFetchCharacters(initial) {
-    dispatch(appActions.doFetchCharacters(initial))
+  doFetchCharacters() {
+    dispatch(appActions.doFetchCharacters())
   },
-  doFetchPlanets(initial) {
-    dispatch(appActions.doFetchPlanets(initial))
+  doFetchPlanets() {
+    dispatch(appActions.doFetchPlanets())
   },
-  doFetchStarships(initial) {
-    dispatch(appActions.doFetchStarships(initial))
+  doFetchStarships() {
+    dispatch(appActions.doFetchStarships())
+  },
+  doFetchCharactersPage(page) {
+    dispatch(appActions.doFetchCharactersPage(page))
+  },
+  doFetchPlanetsPage(page) {
+    dispatch(appActions.doFetchPlanetsPage(page))
+  },
+  doFetchStarshipsPage(page) {
+    dispatch(appActions.doFetchStarshipsPage(page))
   },
   doSearchAll(param) {
     dispatch(appActions.doSearchAll(param))
   },
-  doSearchCharacters(characters, param) {
-    dispatch(appActions.doSearchCharacters(characters, param))
+  doSearchCharacters(param) {
+    dispatch(appActions.doSearchCharacters(param))
   },
-  doSearchPlanets(planets, param) {
-    dispatch(appActions.doSearchPlanets(planets, param))
+  doSearchPlanets(param) {
+    dispatch(appActions.doSearchPlanets(param))
   },
-  doSearchStarships(starships, param) {
-    dispatch(appActions.doSearchStarships(starships, param))
+  doSearchStarships(param) {
+    dispatch(appActions.doSearchStarships(param))
   },
   resetSearchAll() {
     dispatch(appActions.resetSearchAll())

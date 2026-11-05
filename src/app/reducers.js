@@ -1,14 +1,8 @@
 import cloneDeep from 'lodash/cloneDeep';
 import {
-  FETCH_CHARACTERS_START,
-  FETCH_CHARACTERS_FAILURE,
-  FETCH_CHARACTERS_SUCCESS,
-  FETCH_PLANETS_START,
-  FETCH_PLANETS_FAILURE,
-  FETCH_PLANETS_SUCCESS,
-  FETCH_STARSHIPS_START,
-  FETCH_STARSHIPS_FAILURE,
-  FETCH_STARSHIPS_SUCCESS,
+  FETCH_PAGE_START,
+  FETCH_PAGE_SUCCESS,
+  FETCH_PAGE_FAILURE,
   SEARCH_CHARACTERS,
   SEARCH_PLANETS,
   SEARCH_STARSHIPS,
@@ -21,7 +15,33 @@ import {
   SET_DESCRIPTION,
 } from "./actions"
   
+// Per-resource paging: total count from the API, results by page number,
+// pages being fetched and pages that failed to load
+const emptyPaging = {
+  count: 0,
+  pages: {},
+  loading: {},
+  errors: {},
+};
+
+const capitalise = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+
+// Loaded results in page order, for the parts of the app that use a flat list
+const flattenPages = (pages) => (
+  Object.keys(pages)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .flatMap(page => pages[page])
+);
+
+const omit = (object, key) => (
+  Object.fromEntries(Object.entries(object).filter(([entry]) => entry !== String(key)))
+);
+
 export const defaultState = {
+  charactersPaging: emptyPaging,
+  planetsPaging: emptyPaging,
+  starshipsPaging: emptyPaging,
   characters: [{}],
   planets: [{}],
   starships: [{}],
@@ -50,12 +70,6 @@ export default function appReducers (state=defaultState, action) {
   
   switch (type) {
 
-    case FETCH_CHARACTERS_START:
-    case FETCH_CHARACTERS_FAILURE:
-    case FETCH_PLANETS_START:
-    case FETCH_PLANETS_FAILURE:
-    case FETCH_STARSHIPS_START:
-    case FETCH_STARSHIPS_FAILURE:
     case RESET_SEARCH_ALL:
     case RESET_SEARCH_CHARACTERS:
     case RESET_SEARCH_PLANETS:
@@ -66,45 +80,62 @@ export default function appReducers (state=defaultState, action) {
       }
     }
 
-    case FETCH_CHARACTERS_SUCCESS: {
-      const { characters, loadingCharacters } = payload;
-      const app = cloneDeep(state);
-      let recentlyViewed = app.recentlyViewed;
-      recentlyViewed.characters = characters.slice(0, 9);
-
+    // Page 1 is the initial load, so it also drives the app-wide loading flag
+    // and error message, as the full fetch did before
+    case FETCH_PAGE_START: {
+      const { resource, page } = payload;
+      const pagingKey = `${resource}Paging`;
+      const paging = state[pagingKey];
       return {
         ...state,
-        characters,
-        loadingCharacters,
-        recentlyViewed,
+        [pagingKey]: {
+          ...paging,
+          loading: { ...paging.loading, [page]: true },
+          errors: omit(paging.errors, page),
+        },
+        ...(page === 1 && { [`loading${capitalise(resource)}`]: true }),
       }
     }
 
-    case FETCH_PLANETS_SUCCESS: {
-      const { planets, loadingPlanets } = payload;
-      const app = cloneDeep(state);
-      let recentlyViewed = app.recentlyViewed;
-      recentlyViewed.planets = planets.slice(0, 9);
-
+    case FETCH_PAGE_SUCCESS: {
+      const { resource, page, results, count } = payload;
+      const pagingKey = `${resource}Paging`;
+      const paging = state[pagingKey];
+      const pages = { ...paging.pages, [page]: results };
       return {
         ...state,
-        planets,
-        loadingPlanets,
-        recentlyViewed,
+        [pagingKey]: {
+          ...paging,
+          count,
+          pages,
+          loading: omit(paging.loading, page),
+        },
+        [resource]: flattenPages(pages),
+        ...(page === 1 && {
+          [`loading${capitalise(resource)}`]: false,
+          recentlyViewed: {
+            ...state.recentlyViewed,
+            [resource]: results.slice(0, 9),
+          },
+        }),
       }
     }
 
-    case FETCH_STARSHIPS_SUCCESS: {
-      const { starships, loadingStarships } = payload;
-      const app = cloneDeep(state);
-      let recentlyViewed = app.recentlyViewed;
-      recentlyViewed.starships = starships.slice(0, 9);
-
+    case FETCH_PAGE_FAILURE: {
+      const { resource, page, error } = payload;
+      const pagingKey = `${resource}Paging`;
+      const paging = state[pagingKey];
       return {
         ...state,
-        starships,
-        loadingStarships,
-        recentlyViewed,
+        [pagingKey]: {
+          ...paging,
+          loading: omit(paging.loading, page),
+          errors: { ...paging.errors, [page]: error },
+        },
+        ...(page === 1 && {
+          [`loading${capitalise(resource)}`]: false,
+          [`loading${capitalise(resource)}Error`]: error,
+        }),
       }
     }
 
@@ -123,11 +154,7 @@ export default function appReducers (state=defaultState, action) {
           isFilteringCharacters,
         }
       } else {
-        allFilteredCharacters = characters.filter(item => {
-          const name = item.name.toLowerCase();
-          const filter = param.toLowerCase();
-          return name.includes(filter);
-        })
+        allFilteredCharacters = characters;
         charactersSearch[param] = allFilteredCharacters;
 
         return {
@@ -154,11 +181,7 @@ export default function appReducers (state=defaultState, action) {
           isFilteringPlanets,
         }
       } else {
-        allFilteredPlanets = planets.filter(item => {
-          const name = item.name.toLowerCase();
-          const filter = param.toLowerCase();
-          return name.includes(filter);
-        })
+        allFilteredPlanets = planets;
         planetsSearch[param] = allFilteredPlanets;
 
         return {
@@ -185,11 +208,7 @@ export default function appReducers (state=defaultState, action) {
           isFilteringStarships,
         }
       } else {
-        allFilteredStarships = starships.filter(item => {
-          const name = item.name.toLowerCase();
-          const filter = param.toLowerCase();
-          return name.includes(filter);
-        })
+        allFilteredStarships = starships;
         starshipsSearch[param] = allFilteredStarships;
 
         return {
@@ -204,9 +223,7 @@ export default function appReducers (state=defaultState, action) {
     case SEARCH_ALL: {
       const app = cloneDeep(state);
       const { param, isFilteringAll } = payload;
-      const { characters, planets, starships, charactersSearch, 
-        planetsSearch, starshipsSearch 
-      } = app;
+      const { charactersSearch, planetsSearch, starshipsSearch } = app;
       let allFilteredStarships,
           allFilteredCharacters,
           allFilteredPlanets;
@@ -215,11 +232,7 @@ export default function appReducers (state=defaultState, action) {
       if (param in charactersSearch) {
         allFilteredCharacters = charactersSearch[param];
       } else {
-        allFilteredCharacters = characters.filter(item => {
-          const name = item.name.toLowerCase();
-          const filter = param.toLowerCase();
-          return name.includes(filter);
-        })
+        allFilteredCharacters = payload.characters;
         charactersSearch[param] = allFilteredCharacters;
       }
 
@@ -227,11 +240,7 @@ export default function appReducers (state=defaultState, action) {
       if (param in starshipsSearch) {
         allFilteredStarships = starshipsSearch[param];
       } else {
-        allFilteredStarships = starships.filter(item => {
-          const name = item.name.toLowerCase();
-          const filter = param.toLowerCase();
-          return name.includes(filter);
-        })
+        allFilteredStarships = payload.starships;
         starshipsSearch[param] = allFilteredStarships;
       }
 
@@ -239,11 +248,7 @@ export default function appReducers (state=defaultState, action) {
       if (param in planetsSearch) {
         allFilteredPlanets = planetsSearch[param];
       } else {
-        allFilteredPlanets = planets.filter(item => {
-          const name = item.name.toLowerCase();
-          const filter = param.toLowerCase();
-          return name.includes(filter);
-        })
+        allFilteredPlanets = payload.planets;
         planetsSearch[param] = allFilteredPlanets;
       }
 
@@ -253,6 +258,9 @@ export default function appReducers (state=defaultState, action) {
         allFilteredPlanets,
         allFilteredStarships,
         isFilteringAll,
+        charactersSearch,
+        planetsSearch,
+        starshipsSearch,
       }
     }
 
@@ -270,17 +278,12 @@ export default function appReducers (state=defaultState, action) {
     }
 
     case SET_DESCRIPTION: {
-      const app = cloneDeep(state);
-      const { planets, characters, starships } = app;
-      const { category, name } = payload;
+      const { category, item } = payload;
 
       const getItem = (category) => {
-        const findItem = (item) => {
-          return item.name.toLowerCase() === name
-        };
         switch(category) {
           case 'characters': {
-            const character = characters.find(findItem);
+            const character = item;
             const description = `
               ${character.name} is ${character.gender}, and is ${character.height} tall. /n/n
               ${character.gender === "male" ? "He" : (character.gender === "female" ? "She" : "It")} has a mass of ${character.mass}, 
@@ -293,7 +296,7 @@ export default function appReducers (state=defaultState, action) {
             }
           }
           case 'planets': {
-            const planet = planets.find(findItem);
+            const planet = item;
             const description = `
               ${planet.name} has a rotation period of ${planet.rotation_period}, and has a diamater of ${planet.diameter}. /n/n
               It has an orbital period of ${planet.orbital_period}, ${planet.climate.split(", ").join(" and ")} climate, gravity of ${planet.gravity}, and has ${planet.terrain.split(", ").join(" and ")} terrains. 
@@ -305,7 +308,7 @@ export default function appReducers (state=defaultState, action) {
             }
           }
           case 'starships': {
-            const starship = starships.find(findItem);
+            const starship = item;
             const description = `
               ${starship.name} is of the ${starship.model} model and was manufactured by ${starship.manufacturer}. It cost ${starship.cost_in_credits} credits. /n/n
               It has a length of ${starship.length}, maximum atmosphering speed of ${starship.max_atmosphering_speed}, crew capacity of ${starship.crew}, and cargo capacity of ${starship.cargo_capacity}. It has ${starship.passengers} passengers.

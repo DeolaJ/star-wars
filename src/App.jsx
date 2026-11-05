@@ -12,19 +12,11 @@ import Loader from './components/partials/loader';
 class App extends PureComponent {
 
   componentDidMount () {
-    // Load Star wars information from the API
-    const {
-      doFetchCharacters, doFetchPlanets, doFetchStarships, location,
-    } = this.props;
-    if (!location.pathname.includes('description')) {
-      doFetchCharacters(true);
-      doFetchPlanets(true);
-      doFetchStarships(true);
-    } else {
-      doFetchCharacters();
-      doFetchPlanets();
-      doFetchStarships();
-    }
+    // Load the first page of each resource; later pages load when they are opened
+    const { doFetchCharacters, doFetchPlanets, doFetchStarships } = this.props;
+    doFetchCharacters();
+    doFetchPlanets();
+    doFetchStarships();
   }
 
   render () {
@@ -37,7 +29,8 @@ class App extends PureComponent {
       doSearchCharacters, resetSearchCharacters, doSearchStarships, resetSearchStarships,
       doSearchPlanets, resetSearchPlanets, doSearchAll, resetSearchAll,
       setRecentlyViewed, loadingCharacters, loadingPlanets, loadingStarships, recentlyViewed,
-      doSetDescription, descriptionItem,
+      doSetDescription, descriptionItem, charactersPaging, planetsPaging, starshipsPaging,
+      doFetchCharactersPage, doFetchPlanetsPage, doFetchStarshipsPage,
     } = this.props;
 
     if (loadingCharacters || loadingPlanets || loadingStarships) {
@@ -71,6 +64,8 @@ class App extends PureComponent {
           element={
             <Planets
               planets={planets}
+              planetsPaging={planetsPaging}
+              doFetchPlanetsPage={doFetchPlanetsPage}
               loadingPlanetsError={loadingPlanetsError}
               allFilteredPlanets={allFilteredPlanets}
               planetsSearch={planetsSearch}
@@ -86,6 +81,8 @@ class App extends PureComponent {
           element={
             <Characters
               characters={characters}
+              charactersPaging={charactersPaging}
+              doFetchCharactersPage={doFetchCharactersPage}
               loadingCharactersError={loadingCharactersError}
               allFilteredCharacters={allFilteredCharacters}
               charactersSearch={charactersSearch}
@@ -101,6 +98,8 @@ class App extends PureComponent {
           element={
             <Starships
               starships={starships}
+              starshipsPaging={starshipsPaging}
+              doFetchStarshipsPage={doFetchStarshipsPage}
               loadingStarshipsError={loadingStarshipsError}
               allFilteredStarships={allFilteredStarships}
               starshipsSearch={starshipsSearch}
@@ -137,6 +136,12 @@ App.propTypes = {
   doFetchCharacters: PropTypes.func.isRequired,
   doFetchPlanets: PropTypes.func.isRequired,
   doFetchStarships: PropTypes.func.isRequired,
+  doFetchCharactersPage: PropTypes.func.isRequired,
+  doFetchPlanetsPage: PropTypes.func.isRequired,
+  doFetchStarshipsPage: PropTypes.func.isRequired,
+  charactersPaging: PropTypes.object.isRequired,
+  planetsPaging: PropTypes.object.isRequired,
+  starshipsPaging: PropTypes.object.isRequired,
   characters: PropTypes.arrayOf(PropTypes.object).isRequired,
   planets: PropTypes.arrayOf(PropTypes.object).isRequired,
   starships: PropTypes.arrayOf(PropTypes.object).isRequired,

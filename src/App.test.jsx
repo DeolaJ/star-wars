@@ -8,7 +8,7 @@ import App from './connect-App';
 import configureAppStore from './modules/store';
 import { defaultState } from './app/reducers';
 import { API_ENDPOINTS } from './config';
-import { mockFetch } from './test/fixtures';
+import { mockFetch, fetchedUrls } from './test/fixtures';
 
 const renderApp = (route = '/') => {
   const store = configureAppStore({ app: { ...defaultState } });
@@ -22,23 +22,26 @@ const renderApp = (route = '/') => {
   return store;
 };
 
-const waitForAllPages = (store) => waitFor(() => {
-  const { characters, planets, starships } = store.getState().app;
-  expect([characters.length, planets.length, starships.length]).toEqual([15, 13, 12]);
-});
+const page = (resource, n) => `${API_ENDPOINTS[resource]}?page=${n}`;
+const firstPages = [page('characters', 1), page('planets', 1), page('starships', 1)];
 
 describe('App', () => {
-  it('fetches every resource on load and renders the home route', async () => {
+  it('fetches only the first page of each resource on load and renders the home route', async () => {
     const fetchSpy = mockFetch();
     const store = renderApp('/');
 
     expect(await screen.findByText('Popular Characters')).toBeInTheDocument();
     expect(screen.getByText('Popular Planets')).toBeInTheDocument();
-    expect(fetchSpy).toHaveBeenCalledWith(API_ENDPOINTS.characters);
-    expect(fetchSpy).toHaveBeenCalledWith(API_ENDPOINTS.planets);
-    expect(fetchSpy).toHaveBeenCalledWith(API_ENDPOINTS.starships);
-    await waitForAllPages(store);
+    expect(screen.getByText('X-wing')).toBeInTheDocument();
+    expect(fetchedUrls(fetchSpy).sort()).toEqual([...firstPages].sort());
     expect(store.getState().app.loadingCharactersError).toEqual({});
+  });
+
+  it('shows the loader until the first pages arrive', async () => {
+    mockFetch();
+    renderApp('/');
+    expect(screen.getByRole('heading', { name: 'Star Wars' })).toBeInTheDocument();
+    expect(await screen.findByText('Popular Characters')).toBeInTheDocument();
   });
 
   it.each([
@@ -61,29 +64,97 @@ describe('App', () => {
     expect(await screen.findByText('Starwars Characters')).toBeInTheDocument();
   });
 
-  it('paginates the characters list', async () => {
+  it('shows page numbers for every page using the API count', async () => {
     mockFetch();
-    const store = renderApp('/characters');
-    await screen.findByText('Starwars Characters');
-    await waitForAllPages(store);
-
-    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '2' }));
-    expect(screen.queryByText('Luke Skywalker')).not.toBeInTheDocument();
-    expect(screen.getByText('Extra Person 1')).toBeInTheDocument();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    // 13 planets at 10 per page, even though only the first page is loaded
+    expect(screen.getAllByRole('button', { name: /^\d+$/ }).map(b => b.textContent)).toEqual(['1', '2']);
   });
 
+  it('fetches a page only when it is opened, and only once', async () => {
+    const fetchSpy = mockFetch();
+    renderApp('/characters');
+    await screen.findByText('Starwars Characters');
+    expect(screen.getByText('Luke Skywalker')).toBeInTheDocument();
+    expect(fetchedUrls(fetchSpy)).not.toContain(page('characters', 2));
+
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(await screen.findByText('Extra Person 1')).toBeInTheDocument();
+    expect(screen.queryByText('Luke Skywalker')).not.toBeInTheDocument();
+
+    // Going back and forth uses the pages already loaded
+    await userEvent.click(screen.getByRole('button', { name: 'previous icon' }));
+    expect(await screen.findByText('Luke Skywalker')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'next icon' }));
+    expect(await screen.findByText('Extra Person 1')).toBeInTheDocument();
+
+    const urls = fetchedUrls(fetchSpy);
+    expect(urls.filter(url => url === page('characters', 1))).toHaveLength(1);
+    expect(urls.filter(url => url === page('characters', 2))).toHaveLength(1);
+    expect(urls).toHaveLength(4);
+  });
+
+  it('shows a loading message while a page is on its way', async () => {
+    let release;
+    const fetchSpy = mockFetch();
+    const passThrough = fetchSpy.getMockImplementation();
+    fetchSpy.mockImplementation((url) => (
+      url === page('starships', 2)
+        ? new Promise(resolve => { release = () => resolve(passThrough(url)); })
+        : passThrough(url)
+    ));
+    renderApp('/starships');
+    await screen.findByText('Starwars Starships');
+
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(await screen.findByText('Loading page 2...')).toBeInTheDocument();
+    release();
+    expect(await screen.findByText('Extra Starship 1')).toBeInTheDocument();
+    expect(screen.queryByText('Loading page 2...')).not.toBeInTheDocument();
+  });
+
+  it('shows an error for a page that fails and retries when it is opened again', async () => {
+    const fetchSpy = mockFetch({ [page('planets', 2)]: new Error('Timeout') });
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(await screen.findByText('There was an error while loading page 2: Timeout')).toBeInTheDocument();
+
+    fetchSpy.mockRestore();
+    mockFetch();
+    await userEvent.click(screen.getByRole('button', { name: '1' }));
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(await screen.findByText('Extra Planet 1')).toBeInTheDocument();
+  });
+
+  it('searches every page from a list page without loading the pages', async () => {
+    const fetchSpy = mockFetch();
+    const store = renderApp('/characters');
+    await screen.findByText('Starwars Characters');
+
+    // The second search box belongs to the list; the first is the site-wide one in the hero
+    await userEvent.type(screen.getAllByPlaceholderText('Enter a search item')[1], 'extra');
+    expect(await screen.findByText('CHARACTERS Results', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.getByText('Extra Person 5')).toBeInTheDocument();
+    expect(fetchedUrls(fetchSpy)).not.toContain(page('characters', 2));
+    expect(store.getState().app.isFilteringCharacters).toBe(true);
+  }, 10000);
+
   it('shows the API error on the list page when fetching fails', async () => {
-    mockFetch({ [API_ENDPOINTS.planets]: new Error('Network down') });
+    const fetchSpy = mockFetch({ [page('planets', 1)]: new Error('Network down') });
     renderApp('/planets');
     expect(await screen.findByText(/There was an error while loading Star Wars Planets: Network down/)).toBeInTheDocument();
+    // The failed first page is not retried in a loop
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(fetchedUrls(fetchSpy).filter(url => url === page('planets', 1))).toHaveLength(1);
   });
 
   it('searches from the home hero', async () => {
     mockFetch();
     const store = renderApp('/');
     await screen.findByText('Popular Characters');
-    await waitForAllPages(store);
 
     await userEvent.type(screen.getByPlaceholderText('Enter a search item'), 'tatoo');
     await waitFor(() => expect(store.getState().app.isFilteringAll).toBe(true), { timeout: 4000 });
@@ -92,9 +163,8 @@ describe('App', () => {
 
   it('opens the description page from the home slider and moves with the slider', async () => {
     mockFetch();
-    const store = renderApp('/');
+    renderApp('/');
     await screen.findByText('Popular Characters');
-    await waitForAllPages(store);
 
     const link = screen.getAllByRole('link').find(l => l.getAttribute('href') === '/description/starships/x-wing');
     await userEvent.click(link);
@@ -115,5 +185,12 @@ describe('App', () => {
     renderApp(route);
     expect(await screen.findByRole('heading', { level: 1, name })).toBeInTheDocument();
     expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  it('loads a description URL for an item on a page that has not been loaded', async () => {
+    const fetchSpy = mockFetch();
+    renderApp('/description/planets/extra_planet_2');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Extra Planet 2' })).toBeInTheDocument();
+    expect(fetchedUrls(fetchSpy)).not.toContain(page('planets', 2));
   });
 });

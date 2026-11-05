@@ -1,14 +1,8 @@
 import { API_ENDPOINTS } from '../config';
 
-export const FETCH_CHARACTERS_START = "FETCH_CHARACTERS_START";
-export const FETCH_CHARACTERS_SUCCESS = "FETCH_CHARACTERS_SUCCESS";
-export const FETCH_CHARACTERS_FAILURE = "FETCH_CHARACTERS_FAILURE";
-export const FETCH_PLANETS_START = "FETCH_PLANETS_START";
-export const FETCH_PLANETS_SUCCESS = "FETCH_PLANETS_SUCCESS";
-export const FETCH_PLANETS_FAILURE = "FETCH_PLANETS_FAILURE";
-export const FETCH_STARSHIPS_START = "FETCH_STARSHIPS_START";
-export const FETCH_STARSHIPS_SUCCESS = "FETCH_STARSHIPS_SUCCESS";
-export const FETCH_STARSHIPS_FAILURE = "FETCH_STARSHIPS_FAILURE";
+export const FETCH_PAGE_START = "FETCH_PAGE_START";
+export const FETCH_PAGE_SUCCESS = "FETCH_PAGE_SUCCESS";
+export const FETCH_PAGE_FAILURE = "FETCH_PAGE_FAILURE";
 export const SEARCH_ALL = "SEARCH_ALL";
 export const SEARCH_CHARACTERS = "SEARCH_CHARACTERS";
 export const SEARCH_PLANETS = "SEARCH_PLANETS";
@@ -20,48 +14,18 @@ export const RESET_SEARCH_STARSHIPS = "RESET_SEARCH_STARSHIPS";
 export const SET_RECENTLY_VIEWED = "SET_RECENTLY_VIEWED";
 export const SET_DESCRIPTION = "SET_DESCRIPTION";
 
-const fetchCharactersStart = (payload) => ({
-  type: FETCH_CHARACTERS_START,
+const fetchPageStart = (payload) => ({
+  type: FETCH_PAGE_START,
   payload,
 })
 
-const fetchCharactersFailure = (payload) => ({
-  type: FETCH_CHARACTERS_FAILURE,
+const fetchPageSuccess = (payload) => ({
+  type: FETCH_PAGE_SUCCESS,
   payload,
 })
 
-const fetchCharactersSuccess = (payload) => ({
-  type: FETCH_CHARACTERS_SUCCESS,
-  payload,
-})
-
-const fetchPlanetsStart = (payload) => ({
-  type: FETCH_PLANETS_START,
-  payload,
-})
-
-const fetchPlanetsFailure = (payload) => ({
-  type: FETCH_PLANETS_FAILURE,
-  payload,
-})
-
-const fetchPlanetsSuccess = (payload) => ({
-  type: FETCH_PLANETS_SUCCESS,
-  payload,
-})
-
-const fetchStarshipsStart = (payload) => ({
-  type: FETCH_STARSHIPS_START,
-  payload,
-})
-
-const fetchStarshipsFailure = (payload) => ({
-  type: FETCH_STARSHIPS_FAILURE,
-  payload,
-})
-
-const fetchStarshipsSuccess = (payload) => ({
-  type: FETCH_STARSHIPS_SUCCESS,
+const fetchPageFailure = (payload) => ({
+  type: FETCH_PAGE_FAILURE,
   payload,
 })
 
@@ -115,190 +79,145 @@ const setDescription = (payload) => ({
   payload,
 })
 
-const updateMoreResults = async (item, next) => {
-  if (!next) {
-    return item;
-  } else {
-    let nextPage;
-    const results = await fetch(
-      next
-    )
-    .then(response => response.json())
-    .then(response => {
-      nextPage = response.next;
-      nextPage = nextPage && nextPage;
-      return response.results;
-    })
-    // Build a new array: the previous one may already be in the store
-    return updateMoreResults([...item, ...results], nextPage);
+const getJSON = (url) => fetch(url).then(response => {
+  if (response.ok === false) {
+    throw new Error(`Request failed with status ${response.status}`);
   }
-}
+  return response.json();
+});
 
 // Loading Action Creators
-export const doFetchCharacters = (initial) => async (dispatch) => {
-  dispatch(fetchCharactersStart());
+// SWAPI returns 10 results per page, which matches the page size of the list pages,
+// so a page of the UI is exactly one request.
+export const doFetchPage = (resource, page) => (dispatch, getState) => {
+  const paging = getState().app[`${resource}Paging`];
+  if (paging.pages[page] || paging.loading[page]) {
+    // Already loaded or on its way
+    return Promise.resolve();
+  }
+  dispatch(fetchPageStart({ resource, page }));
 
-  let characters;
-  return fetch(API_ENDPOINTS.characters)
-  .then(response => response.json())
-  .then(async response => {
-    characters = [...response.results];
-    // dispatch the first 10 results
-    if (initial) {
-      dispatch(fetchCharactersSuccess({
-        characters,
-        loadingCharacters: false,
-        initial: true
-      }))
-    }
-    // Dispatch the remaining results later
-    if (response.next) {
-      const nextPage = response.next;
-      characters = await updateMoreResults(characters, nextPage);
-      dispatch(fetchCharactersSuccess({
-        characters,
-        loadingCharacters: false,
-      }))
-    }
+  return getJSON(`${API_ENDPOINTS[resource]}?page=${page}`)
+  .then(response => {
+    dispatch(fetchPageSuccess({
+      resource,
+      page,
+      results: response.results,
+      count: response.count,
+    }))
   })
   .catch(error => {
-    dispatch(fetchCharactersFailure({
-      loadingCharactersError: error,
-      loadingCharacters: false
+    dispatch(fetchPageFailure({
+      resource,
+      page,
+      error: { message: error.message },
     }))
   })
 }
 
-export const doFetchPlanets = (initial) => async (dispatch) => {
-  dispatch(fetchPlanetsStart());
+// Only the first page is fetched up front; later pages load when they are opened
+export const doFetchCharacters = () => doFetchPage('characters', 1);
+export const doFetchPlanets = () => doFetchPage('planets', 1);
+export const doFetchStarships = () => doFetchPage('starships', 1);
+export const doFetchCharactersPage = (page) => doFetchPage('characters', page);
+export const doFetchPlanetsPage = (page) => doFetchPage('planets', page);
+export const doFetchStarshipsPage = (page) => doFetchPage('starships', page);
 
-  let planets;
-  return fetch(API_ENDPOINTS.planets)
-  .then(response => response.json())
-  .then(async response => {
-    planets = [...response.results];
-    // dispatch the first 10 results
-    if (initial) {
-      dispatch(fetchPlanetsSuccess({
-        planets,
-        loadingPlanets: false,
-        initial: true
-      }))
-    }
-    // Dispatch the remaining results later
-    if (response.next) {
-      const nextPage = response.next;
-      planets = await updateMoreResults(planets, nextPage);
-      dispatch(fetchPlanetsSuccess({
-        planets,
-        loadingPlanets: false,
-      }))
-    }
-  })
-  .catch(error => {
-    dispatch(fetchPlanetsFailure({
-      loadingPlanetsError: error,
-      loadingPlanets: false
-    }))
-  })
-}
+// Search runs against the API so it covers every page, not only the loaded ones.
+// SWAPI also matches starship models, so results are narrowed to name matches
+// to keep the previous behaviour.
+const fetchSearchResults = async (resource, param) => {
+  const filter = param.toLowerCase();
+  let results = [];
+  let next = `${API_ENDPOINTS[resource]}?search=${encodeURIComponent(param)}`;
+  while (next) {
+    const response = await getJSON(next);
+    results = [...results, ...response.results];
+    next = response.next;
+  }
+  return results.filter(item => item.name.toLowerCase().includes(filter));
+};
 
-export const doFetchStarships = (initial) => async (dispatch) => {
-  dispatch(fetchStarshipsStart());
+const getSearchResults = (state, resource, param) => {
+  const cache = state.app[`${resource}Search`];
+  return param in cache ? Promise.resolve(cache[param]) : fetchSearchResults(resource, param);
+};
 
-  let starships;
-  return fetch(API_ENDPOINTS.starships)
-  .then(response => response.json())
-  .then(async response => {
-    starships = [...response.results];
-    // dispatch the first 10 results
-    if (initial) {
-      dispatch(fetchStarshipsSuccess({
-        starships,
-        loadingStarships: false,
-        initial: true
-      }))
-    }
-    // Dispatch the remaining results later
-    if (response.next) {
-      const nextPage = response.next;
-      starships = await updateMoreResults(starships, nextPage);
-      dispatch(fetchStarshipsSuccess({
-        starships,
-        loadingStarships: false,
-      }))
-    }
-  })
-  .catch(error => {
-    dispatch(fetchStarshipsFailure({
-      loadingStarshipsError: error,
-      loadingStarships: false
-    }))
-  })
-}
+// The latest query per search box, so slow responses for older queries are ignored
+const latestSearch = {};
+
+const searchResource = (resource, param, actionCreator, filteringKey) => async (dispatch, getState) => {
+  latestSearch[resource] = param;
+  let results;
+  try {
+    results = await getSearchResults(getState(), resource, param);
+  } catch {
+    results = [];
+  }
+  if (latestSearch[resource] !== param) return;
+  return dispatch(actionCreator({
+    [resource]: results,
+    param,
+    [filteringKey]: true,
+  }))
+};
 
 // Filter Action Creators
-export const doSearchCharacters = (characters, param) => (dispatch) => (
-  dispatch(searchCharacters({
+export const doSearchCharacters = (param) => searchResource('characters', param, searchCharacters, 'isFilteringCharacters');
+export const doSearchPlanets = (param) => searchResource('planets', param, searchPlanets, 'isFilteringPlanets');
+export const doSearchStarships = (param) => searchResource('starships', param, searchStarships, 'isFilteringStarships');
+
+export const doSearchAll = (param) => async (dispatch, getState) => {
+  latestSearch.all = param;
+  const state = getState();
+  const [characters, planets, starships] = await Promise.all(
+    ['characters', 'planets', 'starships'].map(resource => (
+      getSearchResults(state, resource, param).catch(() => [])
+    ))
+  );
+  if (latestSearch.all !== param) return;
+  return dispatch(searchAll({
+    param,
     characters,
-    param,
-    isFilteringCharacters: true,
-  }))
-)
-
-export const doSearchPlanets = (planets, param) => (dispatch) => (
-  dispatch(searchPlanets({
     planets,
-    param,
-    isFilteringPlanets: true,
-  }))
-)
-
-export const doSearchStarships = (starships, param) => (dispatch) => (
-  dispatch(searchStarships({
     starships,
-    param,
-    isFilteringStarships: true,
-  }))
-)
-
-export const doSearchAll = (param) => (dispatch) => (
-  // Filtering is done on the reducer function
-  dispatch(searchAll({
-    param,
     isFilteringAll: true,
   }))
-)
+}
 
-export const resetSearchCharacters = () => (dispatch) => (
-  dispatch(resetCharacters({
+export const resetSearchCharacters = () => (dispatch) => {
+  latestSearch.characters = null;
+  return dispatch(resetCharacters({
     allFilteredCharacters: [],
     isFilteringCharacters: false
   }))
-)
+}
 
-export const resetSearchPlanets = () => (dispatch) => (
-  dispatch(resetPlanets({
+export const resetSearchPlanets = () => (dispatch) => {
+  latestSearch.planets = null;
+  return dispatch(resetPlanets({
     allFilteredStarships: [],
     isFilteringPlanets: false
   }))
-)
+}
 
-export const resetSearchStarships = () => (dispatch) => (
-  dispatch(resetStarships({
+export const resetSearchStarships = () => (dispatch) => {
+  latestSearch.starships = null;
+  return dispatch(resetStarships({
     allFilteredStarships: [],
     isFilteringStarships: false,
   }))
-)
+}
 
-export const resetSearchAll = () => (dispatch) => (
-  dispatch(resetAll({
+export const resetSearchAll = () => (dispatch) => {
+  latestSearch.all = null;
+  return dispatch(resetAll({
     allFilteredCharacters: [],
     allFilteredPlanets: [],
     allFilteredStarships: [],
     isFilteringAll: false,
   }))
-)
+}
 
 export const setRecentlyViewed = (type, item) => (dispatch) => (
   dispatch(recentlyViewed({
@@ -307,17 +226,43 @@ export const setRecentlyViewed = (type, item) => (dispatch) => (
   }))
 )
 
-export const doSetDescription = (category, name) => (dispatch) => (
-  dispatch(setDescription({
+// Items that are already in the store (loaded pages, search results, recently
+// viewed) are used directly. Anything else, such as a description URL for an item
+// on a page that has not been loaded, is looked up through the search API.
+const findLoadedItem = (app, category, name) => {
+  const candidates = [
+    ...app[category],
+    ...(app.recentlyViewed[category] || []),
+    ...Object.values(app[`${category}Search`]).flat(),
+  ];
+  return candidates.find(item => item.name && item.name.toLowerCase() === name);
+};
+
+export const doSetDescription = (category, name) => async (dispatch, getState) => {
+  let item = findLoadedItem(getState().app, category, name);
+  if (!item) {
+    try {
+      const results = await fetchSearchResults(category, name);
+      item = results.find(result => result.name.toLowerCase() === name);
+    } catch {
+      item = undefined;
+    }
+  }
+  if (!item) return;
+  return dispatch(setDescription({
     category,
-    name
+    name,
+    item,
   }))
-)
+}
 
 export default {
   doFetchCharacters,
   doFetchPlanets,
   doFetchStarships,
+  doFetchCharactersPage,
+  doFetchPlanetsPage,
+  doFetchStarshipsPage,
   doSearchAll,
   doSearchCharacters,
   doSearchPlanets,

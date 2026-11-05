@@ -10,7 +10,7 @@ import ListItem from './partials/list-item';
 import Dropdown from './partials/dropdown';
 
 const MainStarships = ({
-  starships, loadingStarshipsError, doSearchStarships, resetSearchStarships,
+  starshipsPaging, doFetchStarshipsPage, loadingStarshipsError, doSearchStarships, resetSearchStarships,
   isFilteringStarships, starshipsSearch, allFilteredStarships,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -19,7 +19,7 @@ const MainStarships = ({
 
   const performSearch = useRef(debounce((searchParams) => {
     if (searchParams.length > 0) {
-      doSearchStarships(starships, searchParams);
+      doSearchStarships(searchParams);
     } else {
       resetSearchStarships();
     }
@@ -27,12 +27,22 @@ const MainStarships = ({
 
   useEffect(() => performSearch.current(searchParams), [searchParams]);
 
+  // Pages after the first are fetched when the user opens them. Page 1 is the
+  // app's initial load, and retrying it here would loop through the app loader
+  // whenever the API is down.
+  useEffect(() => {
+    if (currentPage > 1) {
+      doFetchStarshipsPage(currentPage);
+    }
+  }, [currentPage, doFetchStarshipsPage]);
+
+  const pageError = starshipsPaging.errors[currentPage];
+  const pageLoading = starshipsPaging.loading[currentPage];
+
   const resultsPerPage = 10;
   const imagePosition = 'top';
 
-  const recentResultsEndIndex = currentPage * resultsPerPage;
-  const firstResultIndex = recentResultsEndIndex - resultsPerPage;
-  const currentStarships = starships.slice(firstResultIndex, recentResultsEndIndex);
+  const currentStarships = starshipsPaging.pages[currentPage] || [];
 
   const viewOptions = [
     {
@@ -89,6 +99,20 @@ const MainStarships = ({
               : (
                 <>
                   {
+                    pageError && (
+                      <p>
+                        {`There was an error while loading page ${currentPage}: ${pageError.message}`}
+                      </p>
+                    )
+                  }
+                  {
+                    !pageError && pageLoading && (
+                      <p>
+                        {`Loading page ${currentPage}...`}
+                      </p>
+                    )
+                  }
+                  {
                     currentStarships.map(starship => (
                       <React.Fragment key={starship.name}>
                         <ListItem
@@ -103,7 +127,7 @@ const MainStarships = ({
                     ))
                   }
                   <Pagination
-                    items={starships}
+                    totalItems={starshipsPaging.count}
                     resultsPerPage={resultsPerPage}
                     changeResultPage={setCurrentPage}
                     currentPage={currentPage}
@@ -120,6 +144,13 @@ const MainStarships = ({
 
 MainStarships.propTypes = {
   starships: PropTypes.arrayOf(PropTypes.object).isRequired,
+  starshipsPaging: PropTypes.shape({
+    count: PropTypes.number,
+    pages: PropTypes.object,
+    loading: PropTypes.object,
+    errors: PropTypes.object,
+  }).isRequired,
+  doFetchStarshipsPage: PropTypes.func.isRequired,
   loadingStarshipsError: PropTypes.object.isRequired,
   doSearchStarships: PropTypes.func.isRequired,
   resetSearchStarships: PropTypes.func.isRequired,

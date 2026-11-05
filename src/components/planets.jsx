@@ -4,7 +4,7 @@ import MainPlanets from './main-planets';
 import Layout from './layout';
 
 const Planets = ({
-  planets, loadingPlanetsError, allFilteredPlanets, planetsSearch, 
+  planets, planetsPaging, doFetchPlanetsPage, loadingPlanetsError, allFilteredPlanets, planetsSearch, 
   isFilteringPlanets, doSearchAll, resetSearchAll, doSearchPlanets,
   resetSearchPlanets,
 }) => {
@@ -22,6 +22,8 @@ const Planets = ({
     >
       <MainPlanets
         planets={planets}
+        planetsPaging={planetsPaging}
+        doFetchPlanetsPage={doFetchPlanetsPage}
         loadingPlanetsError={loadingPlanetsError}
         doSearchPlanets={doSearchPlanets}
         resetSearchPlanets={resetSearchPlanets}
@@ -35,6 +37,8 @@ const Planets = ({
 
 Planets.propTypes = {
   planets: PropTypes.arrayOf(PropTypes.object).isRequired,
+  planetsPaging: PropTypes.object.isRequired,
+  doFetchPlanetsPage: PropTypes.func.isRequired,
   loadingPlanetsError: PropTypes.object.isRequired,
   planetsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
   allFilteredPlanets: PropTypes.arrayOf(PropTypes.object).isRequired,

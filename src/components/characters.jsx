@@ -4,7 +4,7 @@ import MainCharacters from './main-characters';
 import Layout from './layout';
 
 const Characters = ({
-  characters, loadingCharactersError, allFilteredCharacters, charactersSearch, 
+  characters, charactersPaging, doFetchCharactersPage, loadingCharactersError, allFilteredCharacters, charactersSearch, 
   isFilteringCharacters, doSearchAll, resetSearchAll, resetSearchCharacters,
   doSearchCharacters,
 }) => {
@@ -22,6 +22,8 @@ const Characters = ({
     >
       <MainCharacters 
         characters={characters}
+        charactersPaging={charactersPaging}
+        doFetchCharactersPage={doFetchCharactersPage}
         loadingCharactersError={loadingCharactersError}
         resetSearchCharacters={resetSearchCharacters}
         doSearchCharacters={doSearchCharacters}
@@ -35,6 +37,8 @@ const Characters = ({
 
 Characters.propTypes = {
   characters: PropTypes.arrayOf(PropTypes.object).isRequired,
+  charactersPaging: PropTypes.object.isRequired,
+  doFetchCharactersPage: PropTypes.func.isRequired,
   loadingCharactersError: PropTypes.object.isRequired,
   charactersSearch: PropTypes.objectOf(PropTypes.array).isRequired,
   allFilteredCharacters: PropTypes.arrayOf(PropTypes.object).isRequired,

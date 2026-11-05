@@ -4,7 +4,7 @@ import MainStarships from './main-starships';
 import Layout from './layout';
 
 const Starships = ({
-  starships, loadingStarshipsError, allFilteredStarships, starshipsSearch, 
+  starships, starshipsPaging, doFetchStarshipsPage, loadingStarshipsError, allFilteredStarships, starshipsSearch, 
   isFilteringStarships, doSearchAll, resetSearchAll, doSearchStarships, resetSearchStarships,
 }) => {
   useEffect(() => {
@@ -21,6 +21,8 @@ const Starships = ({
     >
       <MainStarships
         starships={starships}
+        starshipsPaging={starshipsPaging}
+        doFetchStarshipsPage={doFetchStarshipsPage}
         loadingStarshipsError={loadingStarshipsError}
         doSearchStarships={doSearchStarships}
         resetSearchStarships={resetSearchStarships}
@@ -34,6 +36,8 @@ const Starships = ({
 
 Starships.propTypes = {
   starships: PropTypes.arrayOf(PropTypes.object).isRequired,
+  starshipsPaging: PropTypes.object.isRequired,
+  doFetchStarshipsPage: PropTypes.func.isRequired,
   loadingStarshipsError: PropTypes.object.isRequired,
   starshipsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
   allFilteredStarships: PropTypes.arrayOf(PropTypes.object).isRequired,

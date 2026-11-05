@@ -10,7 +10,7 @@ import ListItem from './partials/list-item';
 import Dropdown from './partials/dropdown';
 
 const MainPlanets = ({
-  planets, loadingPlanetsError, doSearchPlanets, resetSearchPlanets,
+  planetsPaging, doFetchPlanetsPage, loadingPlanetsError, doSearchPlanets, resetSearchPlanets,
   isFilteringPlanets, planetsSearch, allFilteredPlanets,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -19,7 +19,7 @@ const MainPlanets = ({
 
   const performSearch = useRef(debounce((searchParams) => {
     if (searchParams.length > 0) {
-      doSearchPlanets(planets, searchParams);
+      doSearchPlanets(searchParams);
     } else {
       resetSearchPlanets();
     }
@@ -27,12 +27,22 @@ const MainPlanets = ({
 
   useEffect(() => performSearch.current(searchParams), [searchParams]);
 
+  // Pages after the first are fetched when the user opens them. Page 1 is the
+  // app's initial load, and retrying it here would loop through the app loader
+  // whenever the API is down.
+  useEffect(() => {
+    if (currentPage > 1) {
+      doFetchPlanetsPage(currentPage);
+    }
+  }, [currentPage, doFetchPlanetsPage]);
+
+  const pageError = planetsPaging.errors[currentPage];
+  const pageLoading = planetsPaging.loading[currentPage];
+
   const resultsPerPage = 10;
   const imagePosition = 'left';
 
-  const recentResultsEndIndex = currentPage * resultsPerPage;
-  const firstResultIndex = recentResultsEndIndex - resultsPerPage;
-  const currentPlanets = planets.slice(firstResultIndex, recentResultsEndIndex);
+  const currentPlanets = planetsPaging.pages[currentPage] || [];
 
   const viewOptions = [
     {
@@ -90,6 +100,20 @@ const MainPlanets = ({
               : (
                 <>
                   {
+                    pageError && (
+                      <p>
+                        {`There was an error while loading page ${currentPage}: ${pageError.message}`}
+                      </p>
+                    )
+                  }
+                  {
+                    !pageError && pageLoading && (
+                      <p>
+                        {`Loading page ${currentPage}...`}
+                      </p>
+                    )
+                  }
+                  {
                     currentPlanets.map(planet => (
                       <React.Fragment key={planet.name}>
                         <ListItem
@@ -104,7 +128,7 @@ const MainPlanets = ({
                     ))
                   }
                   <Pagination
-                    items={planets}
+                    totalItems={planetsPaging.count}
                     resultsPerPage={resultsPerPage}
                     changeResultPage={setCurrentPage}
                     currentPage={currentPage}
@@ -121,6 +145,13 @@ const MainPlanets = ({
 
 MainPlanets.propTypes = {
   planets: PropTypes.arrayOf(PropTypes.object).isRequired,
+  planetsPaging: PropTypes.shape({
+    count: PropTypes.number,
+    pages: PropTypes.object,
+    loading: PropTypes.object,
+    errors: PropTypes.object,
+  }).isRequired,
+  doFetchPlanetsPage: PropTypes.func.isRequired,
   loadingPlanetsError: PropTypes.object.isRequired,
   doSearchPlanets: PropTypes.func.isRequired,
   resetSearchPlanets: PropTypes.func.isRequired,
