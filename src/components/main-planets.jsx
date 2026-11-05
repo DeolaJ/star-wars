@@ -117,6 +117,7 @@ const MainPlanets = ({
                     currentPlanets.map(planet => (
                       <React.Fragment key={planet.name}>
                         <ListItem
+                          item={planet}
                           imagePosition={imagePosition}
                           name={planet.name}
                           type="planets"

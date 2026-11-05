@@ -4,22 +4,10 @@ import isEmpty from 'lodash/isEmpty';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Hero from './partials/hero';
 import Layout from './layout';
-import Character1 from '../assets/character-1.jpg';
-import Character2 from '../assets/character-2.jpg';
-import Character3 from '../assets/character-3.jpg';
-import Character4 from '../assets/character-4.jpg';
-import Planet1 from '../assets/planet-1.jpg';
-import Planet2 from '../assets/planet-2.jpg';
-import Planet3 from '../assets/planet-3.jpg';
-import Starship1 from '../assets/starship-1.jpg';
-import Starship2 from '../assets/starship-2.jpg';
-import Starship3 from '../assets/starship-3.jpg';
-import Starship4 from '../assets/starship-4.jpg';
-import Starship5 from '../assets/starship-5.jpg';
-import Starship6 from '../assets/starship-6.jpg';
 import RecentlyViewed from './partials/recently-viewed';
 import RightChevron from '../assets/chevron-right.svg';
 import LeftChevron from '../assets/chevron-left.svg';
+import { artworkFor, SIZES } from './partials/artwork';
 
 const Description = ({
   recentlyViewed, descriptionItem, doSetDescription, 
@@ -28,33 +16,10 @@ const Description = ({
   const { category, id } = useParams();
   const [currentIndex, setCurrentIndex] = useState(recentlyViewed[category].length - 1)
   const [currentNegIndex, setCurrentNegIndex] = useState(0)
-  const [imageLink, setImageLink] = useState('');
   const [nextLink, setNextLink] = useState('');
   const [previousLink, setPreviousLink] = useState('');
   const idName = id.split("_").join(" ");
-  const characterImages = [
-    Character1, Character2, Character3, Character4
-  ];
-  const starshipImages = [
-    Starship1, Starship2, Starship3, Starship4, Starship5, Starship6
-  ];
-  const planetImages = [
-    Planet1, Planet2, Planet3
-  ];
-  const randomImage = (total) => {
-    return Math.floor(Math.random() * total);
-  };
-  const link = (category) => {
-    switch(category) {
-      case 'characters': return characterImages[randomImage(4)]
-      case 'planets': return planetImages[randomImage(3)]
-      case 'starships': return starshipImages[randomImage(6)]
-      default: return
-    }
-  };
-
   const getItemInfo = useRef((category) => {
-    setImageLink(link(category));
     doSetDescription(category, idName)
   });
 
@@ -74,6 +39,9 @@ const Description = ({
       setRecentlyViewed(category, descriptionItem.category);
     }
   }, [category, setRecentlyViewed, descriptionItem])
+
+  // The picture follows the item shown, so it changes with next and previous
+  const artwork = !isEmpty(descriptionItem) ? artworkFor(category, descriptionItem.category) : null;
 
   const navigate = useNavigate();
   const navigateNext = () => {
@@ -97,7 +65,17 @@ const Description = ({
         !isEmpty(descriptionItem) && !isEmpty(recentlyViewed) && (
           <div className="description">
             <Hero>
-              <img src={imageLink} alt={`${category} description`} />
+              {artwork && (
+                <img
+                  src={artwork.src}
+                  srcSet={artwork.srcSet}
+                  sizes={SIZES.description}
+                  width={artwork.width}
+                  height={artwork.height}
+                  decoding="async"
+                  alt={`${category} description`}
+                />
+              )}
               <div className="description__title">
                 <h1>
                   {descriptionItem.category.name}

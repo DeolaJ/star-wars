@@ -4,6 +4,9 @@
 
     > img {
       width: 65%;
+      // The width and height attributes only reserve space while loading;
+      // the height must follow the width so the artwork keeps its shape
+      height: auto;
     }
 
     .description__title {

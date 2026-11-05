@@ -3,7 +3,7 @@ import debounce from 'lodash/debounce';
 import PropTypes from 'prop-types';
 import Hero from './partials/hero';
 import SearchBar from './partials/searchbar';
-import Logo from '../assets/logo.png';
+import Emblem from '../assets/emblem.svg';
 
 const MainHero = ({
   doSearchAll, resetSearchAll,
@@ -24,7 +24,7 @@ const MainHero = ({
     <Hero>
       <div className="hero__content">
         <div className="hero__heading">
-          <img src={Logo} alt="Star wars logo" className="hero__logo" />
+          <img src={Emblem} alt="Star Wars Directory emblem" className="hero__logo" width="50" height="50" />
           <h2>Directory</h2>
         </div>
         <h3 className="hero__subtext">

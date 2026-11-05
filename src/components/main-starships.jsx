@@ -116,6 +116,7 @@ const MainStarships = ({
                     currentStarships.map(starship => (
                       <React.Fragment key={starship.name}>
                         <ListItem
+                          item={starship}
                           imagePosition={imagePosition}
                           name={starship.name}
                           type="starships"

@@ -1,12 +1,12 @@
 import React from 'react';
-import Banner from '../../assets/hero-banner.jpg';
+import { heroBackground } from './artwork';
 
 const Loader = () => {
   return (
     <div 
       style={{ 
         background: "darkblue", display: 'flex', width: '100%', height: '100vh', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold',
-        color: 'white', fontSize: '2rem', backgroundImage: `url(${Banner})`, backgroundSize: 'cover',
+        color: 'white', fontSize: '2rem', backgroundImage: `url(${heroBackground})`, backgroundSize: 'cover',
       }}
     >
       <h1>

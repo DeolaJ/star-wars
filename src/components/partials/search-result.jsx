@@ -40,6 +40,7 @@ const SearchResult = ({
                 allFilteredPlanets.map(planet => (
                   <React.Fragment key={planet.name}>
                     <ListItem
+                      item={planet}
                       imagePosition="top"
                       name={planet.name}
                       type="planets"
@@ -59,6 +60,7 @@ const SearchResult = ({
                 allFilteredCharacters.map(character => (
                   <React.Fragment key={character.name}>
                     <ListItem
+                      item={character}
                       imagePosition="left"
                       type="characters"
                       name={character.name}
@@ -78,6 +80,7 @@ const SearchResult = ({
                 allFilteredStarships.map(starship => (
                   <React.Fragment key={starship.name}>
                     <ListItem
+                      item={starship}
                       imagePosition="top"
                       type="starships"
                       name={starship.name}
@@ -109,6 +112,7 @@ const SearchResult = ({
                 categoryType.list.map(item => (
                   <React.Fragment key={item.name}>
                     <ListItem
+                      item={item}
                       imagePosition={!item.gender ? "top" : "left"}
                       name={item.name}
                       type={category}

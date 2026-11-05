@@ -29,6 +29,7 @@ const MainHome = ({
               {
                 starships.slice(0, 6).map(starship => (
                   <ListItem
+                    item={starship}
                     key={starship.name}
                     imagePosition="top"
                     type="starships"
@@ -102,6 +103,7 @@ const MainHome = ({
               {
                 characters.slice(0, 4).map(character => (
                   <ListItem
+                    item={character}
                     key={character.name}
                     imagePosition="left"
                     type="characters"

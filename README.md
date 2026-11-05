@@ -58,6 +58,13 @@ No API keys or environment variables are needed.
 
     npm run build
 
+### Artwork
+
+The images in `src/assets/images` are original artwork drawn by `scripts/generate-art.py` (Python 3 with numpy and Pillow). Each image is rendered from a fixed seed, so running the script again reproduces the same files:
+
+    python scripts/generate-art.py            # all artwork
+    python scripts/generate-art.py starships  # one group: hero, characters, planets, starships
+
 ## Roadmap
 
 Planned work lives in [ROADMAP.md](ROADMAP.md).

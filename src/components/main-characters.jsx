@@ -153,6 +153,7 @@ const MainCharacters = ({
                     currentCharacters.map(character => (
                       <React.Fragment key={character.name}>
                         <ListItem
+                          item={character}
                           imagePosition={imagePosition}
                           name={character.name}
                           type="characters"

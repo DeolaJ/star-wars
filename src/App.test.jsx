@@ -272,4 +272,43 @@ describe('App', () => {
       expect(await screen.findByText('Extra Starship 1')).toBeInTheDocument();
     });
   });
+
+  describe('artwork', () => {
+    it('lazy-loads card images with responsive sizes and the same picture on every render', async () => {
+      mockFetch();
+      renderApp('/characters');
+      const luke = await screen.findByAltText('characters Luke Skywalker');
+      expect(luke).toHaveAttribute('loading', 'lazy');
+      expect(luke).toHaveAttribute('decoding', 'async');
+      expect(luke.getAttribute('srcset')).toMatch(/600w, .*1200w$/);
+      expect(luke).toHaveAttribute('width', '600');
+      const first = luke.getAttribute('src');
+
+      // Re-rendering (here by paging away and back) keeps each card's picture
+      await userEvent.click(screen.getByRole('button', { name: '2' }));
+      await screen.findByText('Extra Person 1');
+      await userEvent.click(screen.getByRole('button', { name: '1' }));
+      expect((await screen.findByAltText('characters Luke Skywalker')).getAttribute('src')).toBe(first);
+    });
+
+    it('loads the hero banner eagerly with every width', async () => {
+      mockFetch();
+      renderApp('/');
+      await screen.findByText('Popular Characters');
+      const banner = document.querySelector('.hero__banner');
+      expect(banner).not.toHaveAttribute('loading');
+      expect(banner).toHaveAttribute('fetchpriority', 'high');
+      expect(banner.getAttribute('srcset')).toMatch(/1280w, .*1920w, .*2880w$/);
+      expect(screen.getByAltText('Star Wars Directory emblem').getAttribute('src')).toMatch(/emblem\.svg/);
+    });
+
+    it('shows the picture that belongs to the item on the description page', async () => {
+      mockFetch();
+      renderApp('/description/planets/tatooine');
+      await screen.findByRole('heading', { level: 1, name: 'Tatooine' });
+      const image = screen.getByAltText('planets description');
+      expect(image.getAttribute('srcset')).toMatch(/planet-\d-600\.webp 600w, .*planet-\d-1200\.webp 1200w/);
+      expect(image).toHaveAttribute('sizes', '(max-width: 800px) 65vw, 520px');
+    });
+  });
 });

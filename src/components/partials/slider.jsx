@@ -25,7 +25,8 @@ const Slider = ({
       <div className="slider__body">
         {
           currentItems.map(item => (
-            <ListItem 
+            <ListItem
+              item={item}
               key={item.name} 
               imagePosition={item.gender ? "left" : "top"}
               name={item.name}
