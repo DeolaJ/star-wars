@@ -3,37 +3,28 @@ import PropTypes from 'prop-types';
 import { Routes, Route } from 'react-router-dom';
 import './styles/main.scss';
 import Home from './components/home';
-import Planets from './components/planets';
-import Characters from './components/characters';
-import Starships from './components/starships';
+import ResourcePage from './components/resource-page';
 import Description from './components/description';
 import Loader from './components/partials/loader';
+import { RESOURCE_KEYS, listPath } from './resources';
+import { resourcesShape } from './components/resource-props';
 
 class App extends PureComponent {
 
   componentDidMount () {
     // Load the first page of each resource; later pages load when they are opened
-    const { doFetchCharacters, doFetchPlanets, doFetchStarships } = this.props;
-    doFetchCharacters();
-    doFetchPlanets();
-    doFetchStarships();
+    const { doFetchPage } = this.props;
+    RESOURCE_KEYS.forEach(resource => doFetchPage(resource, 1));
   }
 
   render () {
     const {
-      characters, planets, starships, charactersSearch,
-      planetsSearch, starshipsSearch, allFilteredCharacters,
-      allFilteredPlanets, allFilteredStarships, loadingCharactersError,
-      loadingPlanetsError, loadingStarshipsError, isFilteringAll,
-      isFilteringCharacters, isFilteringPlanets, isFilteringStarships,
-      doSearchCharacters, resetSearchCharacters, doSearchStarships, resetSearchStarships,
-      doSearchPlanets, resetSearchPlanets, doSearchAll, resetSearchAll,
-      setRecentlyViewed, loadingCharacters, loadingPlanets, loadingStarships, recentlyViewed,
-      doSetDescription, descriptionItem, charactersPaging, planetsPaging, starshipsPaging,
-      doFetchCharactersPage, doFetchPlanetsPage, doFetchStarshipsPage,
+      resources, isFilteringAll, recentlyViewed, descriptionItem,
+      doFetchPage, doSearch, resetSearch, doSearchAll, resetSearchAll,
+      setRecentlyViewed, doSetDescription,
     } = this.props;
 
-    if (loadingCharacters || loadingPlanets || loadingStarships) {
+    if (RESOURCE_KEYS.some(resource => resources[resource].loading)) {
       return <Loader />;
     }
 
@@ -42,84 +33,38 @@ class App extends PureComponent {
         <Route path="/"
           element={
             <Home
-              characters={characters}
-              planets={planets}
-              starships={starships}
-              loadingCharactersError={loadingCharactersError}
-              loadingPlanetsError={loadingPlanetsError}
-              loadingStarshipsError={loadingStarshipsError}
-              allFilteredCharacters={allFilteredCharacters}
-              allFilteredPlanets={allFilteredPlanets}
-              allFilteredStarships={allFilteredStarships}
-              charactersSearch={charactersSearch}
-              planetsSearch={planetsSearch}
-              starshipsSearch={starshipsSearch}
+              resources={resources}
               isFilteringAll={isFilteringAll}
               doSearchAll={doSearchAll}
               resetSearchAll={resetSearchAll}
             />
           }
         />
-        <Route path="/planets"
-          element={
-            <Planets
-              planets={planets}
-              planetsPaging={planetsPaging}
-              doFetchPlanetsPage={doFetchPlanetsPage}
-              loadingPlanetsError={loadingPlanetsError}
-              allFilteredPlanets={allFilteredPlanets}
-              planetsSearch={planetsSearch}
-              isFilteringPlanets={isFilteringPlanets}
-              doSearchPlanets={doSearchPlanets}
-              resetSearchPlanets={resetSearchPlanets}
-              doSearchAll={doSearchAll}
-              resetSearchAll={resetSearchAll}
+        {
+          RESOURCE_KEYS.map(resource => (
+            <Route
+              key={resource}
+              path={listPath(resource)}
+              element={
+                // Keyed so moving between two resource pages starts the new
+                // one fresh instead of carrying over the page and search
+                <ResourcePage
+                  key={resource}
+                  resource={resource}
+                  data={resources[resource]}
+                  doFetchPage={doFetchPage}
+                  doSearch={doSearch}
+                  resetSearch={resetSearch}
+                  doSearchAll={doSearchAll}
+                  resetSearchAll={resetSearchAll}
+                />
+              }
             />
-          }
-        />
-        <Route path="/characters"
-          element={
-            <Characters
-              characters={characters}
-              charactersPaging={charactersPaging}
-              doFetchCharactersPage={doFetchCharactersPage}
-              loadingCharactersError={loadingCharactersError}
-              allFilteredCharacters={allFilteredCharacters}
-              charactersSearch={charactersSearch}
-              isFilteringCharacters={isFilteringCharacters}
-              doSearchCharacters={doSearchCharacters}
-              resetSearchCharacters={resetSearchCharacters}
-              doSearchAll={doSearchAll}
-              resetSearchAll={resetSearchAll}
-            />
-          }
-        />
-        <Route path="/starships"
-          element={
-            <Starships
-              starships={starships}
-              starshipsPaging={starshipsPaging}
-              doFetchStarshipsPage={doFetchStarshipsPage}
-              loadingStarshipsError={loadingStarshipsError}
-              allFilteredStarships={allFilteredStarships}
-              starshipsSearch={starshipsSearch}
-              isFilteringStarships={isFilteringStarships}
-              doSearchStarships={doSearchStarships}
-              resetSearchStarships={resetSearchStarships}
-              doSearchAll={doSearchAll}
-              resetSearchAll={resetSearchAll}
-            />
-          }
-        />
+          ))
+        }
         <Route path="/description/:category/:id"
           element={
             <Description
-              characters={characters}
-              planets={planets}
-              starships={starships}
-              loadingCharactersError={loadingCharactersError}
-              loadingPlanetsError={loadingPlanetsError}
-              loadingStarshipsError={loadingStarshipsError}
               setRecentlyViewed={setRecentlyViewed}
               recentlyViewed={recentlyViewed}
               descriptionItem={descriptionItem}
@@ -133,44 +78,17 @@ class App extends PureComponent {
 };
 
 App.propTypes = {
-  doFetchCharacters: PropTypes.func.isRequired,
-  doFetchPlanets: PropTypes.func.isRequired,
-  doFetchStarships: PropTypes.func.isRequired,
-  doFetchCharactersPage: PropTypes.func.isRequired,
-  doFetchPlanetsPage: PropTypes.func.isRequired,
-  doFetchStarshipsPage: PropTypes.func.isRequired,
-  charactersPaging: PropTypes.object.isRequired,
-  planetsPaging: PropTypes.object.isRequired,
-  starshipsPaging: PropTypes.object.isRequired,
-  characters: PropTypes.arrayOf(PropTypes.object).isRequired,
-  planets: PropTypes.arrayOf(PropTypes.object).isRequired,
-  starships: PropTypes.arrayOf(PropTypes.object).isRequired,
-  loadingCharactersError: PropTypes.object.isRequired,
-  loadingPlanetsError: PropTypes.object.isRequired,
-  loadingStarshipsError: PropTypes.object.isRequired,
-  loading: PropTypes.bool.isRequired,
-  charactersSearch: PropTypes.objectOf(PropTypes.array).isRequired,
-  planetsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
-  starshipsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
-  allFilteredCharacters: PropTypes.arrayOf(PropTypes.object).isRequired,
-  allFilteredPlanets: PropTypes.arrayOf(PropTypes.object).isRequired,
-  allFilteredStarships: PropTypes.arrayOf(PropTypes.object).isRequired,
+  resources: resourcesShape.isRequired,
   isFilteringAll: PropTypes.bool.isRequired,
-  isFilteringCharacters: PropTypes.bool.isRequired,
-  isFilteringPlanets: PropTypes.bool.isRequired,
-  isFilteringStarships: PropTypes.bool.isRequired,
-  doSearchAll: PropTypes.func.isRequired,
-  doSearchCharacters: PropTypes.func.isRequired,
-  doSearchPlanets: PropTypes.func.isRequired,
-  doSearchStarships: PropTypes.func.isRequired,
-  resetSearchAll: PropTypes.func.isRequired,
-  resetSearchCharacters: PropTypes.func.isRequired,
-  resetSearchPlanets: PropTypes.func.isRequired,
-  resetSearchStarships: PropTypes.func.isRequired,
-  setRecentlyViewed: PropTypes.func.isRequired,
   recentlyViewed: PropTypes.object.isRequired,
-  doSetDescription: PropTypes.func.isRequired,
   descriptionItem: PropTypes.object.isRequired,
+  doFetchPage: PropTypes.func.isRequired,
+  doSearch: PropTypes.func.isRequired,
+  resetSearch: PropTypes.func.isRequired,
+  doSearchAll: PropTypes.func.isRequired,
+  resetSearchAll: PropTypes.func.isRequired,
+  setRecentlyViewed: PropTypes.func.isRequired,
+  doSetDescription: PropTypes.func.isRequired,
 };
 
 export default App;

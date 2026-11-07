@@ -3,15 +3,20 @@ import PropTypes from 'prop-types';
 import MainHome from './mainhome';
 import SearchResult from './partials/search-result';
 import Layout from './layout';
+import { RESOURCE_KEYS } from '../resources';
+import { resourcesShape } from './resource-props';
 
 const Home = ({ 
-  characters, planets, starships, loadingCharactersError, loadingPlanetsError, loadingStarshipsError,
-  charactersSearch, planetsSearch, starshipsSearch, allFilteredCharacters, 
-  allFilteredPlanets, allFilteredStarships, isFilteringAll, doSearchAll, resetSearchAll,
+  resources, isFilteringAll, doSearchAll, resetSearchAll,
 }) => {
+  // Arriving at the home page clears any search left over from another page
   useEffect(() => {
-    return resetSearchAll()
+    resetSearchAll();
   }, [resetSearchAll]);
+
+  const results = Object.fromEntries(
+    RESOURCE_KEYS.map(resource => [resource, resources[resource].filtered])
+  );
 
   return (
     <Layout
@@ -20,27 +25,14 @@ const Home = ({
     >
       {
         isFilteringAll 
-
         ? (
           <SearchResult
-            type="all"
-            allFilteredCharacters={allFilteredCharacters}
-            allFilteredPlanets={allFilteredPlanets}
-            allFilteredStarships={allFilteredStarships}
-            charactersSearch={charactersSearch}
-            planetsSearch={planetsSearch}
-            starshipsSearch={starshipsSearch}
+            results={results}
           />
         )
-
         : (
           <MainHome 
-            characters={characters}
-            planets={planets}
-            starships={starships}
-            loadingCharactersError={loadingCharactersError}
-            loadingPlanetsError={loadingPlanetsError}
-            loadingStarshipsError={loadingStarshipsError}
+            resources={resources}
           />
         )
       }
@@ -49,18 +41,7 @@ const Home = ({
 };
 
 Home.propTypes = {
-  characters: PropTypes.arrayOf(PropTypes.object).isRequired,
-  planets: PropTypes.arrayOf(PropTypes.object).isRequired,
-  starships: PropTypes.arrayOf(PropTypes.object).isRequired,
-  loadingCharactersError: PropTypes.object.isRequired,
-  loadingPlanetsError: PropTypes.object.isRequired,
-  loadingStarshipsError: PropTypes.object.isRequired,
-  charactersSearch: PropTypes.objectOf(PropTypes.array).isRequired,
-  planetsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
-  starshipsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
-  allFilteredCharacters: PropTypes.arrayOf(PropTypes.object).isRequired,
-  allFilteredPlanets: PropTypes.arrayOf(PropTypes.object).isRequired,
-  allFilteredStarships: PropTypes.arrayOf(PropTypes.object).isRequired,
+  resources: resourcesShape.isRequired,
   isFilteringAll: PropTypes.bool.isRequired,
   doSearchAll: PropTypes.func.isRequired,
   resetSearchAll: PropTypes.func.isRequired,

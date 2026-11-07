@@ -1,3 +1,5 @@
+import { RESOURCES, RESOURCE_KEYS } from './resources';
+
 // Base URL for the Star Wars API.
 export const API_BASE_URL = 'https://swapi.dev/api';
 
@@ -16,16 +18,12 @@ export const API_TIMEOUT_MS = 8000;
 export const API_PRIMARY_RETRY_MS = 5 * 60 * 1000;
 
 // Paths of each resource, relative to a base URL
-export const API_PATHS = {
-  characters: 'people/',
-  planets: 'planets/',
-  starships: 'starships/',
-};
+export const API_PATHS = Object.fromEntries(
+  RESOURCE_KEYS.map(resource => [resource, RESOURCES[resource].path])
+);
 
 // Endpoints for the first page of each resource on swapi.dev. Cache entries are
 // keyed by these URLs whichever server answered, so they stay valid either way.
-export const API_ENDPOINTS = {
-  characters: `${API_BASE_URL}/${API_PATHS.characters}`,
-  planets: `${API_BASE_URL}/${API_PATHS.planets}`,
-  starships: `${API_BASE_URL}/${API_PATHS.starships}`,
-};
+export const API_ENDPOINTS = Object.fromEntries(
+  RESOURCE_KEYS.map(resource => [resource, `${API_BASE_URL}/${API_PATHS[resource]}`])
+);

@@ -5,139 +5,83 @@ import { Link } from 'react-router-dom';
 import Section from './partials/section';
 import Slider from './partials/slider';
 import ListItem from './partials/list-item';
+import { RESOURCES, listPath } from '../resources';
+import { resourceDataShape, resourcesShape } from './resource-props';
 
-const MainHome = ({
-  characters, planets, starships, loadingCharactersError, 
-  loadingPlanetsError, loadingStarshipsError,
-}) => {
+// A "Popular ..." section: a taste of one resource with a link to all of it,
+// or the error that stopped it loading
+const Popular = ({ resource, data, children }) => {
+  const { label } = RESOURCES[resource];
+  return (
+    <Section
+      title={`Popular ${label}`}
+    >
+      {
+        !isEmpty(data.error.message)
+        ? (
+          <p>
+            {`There was an error while loading Star Wars ${label}: ${data.error.message}`}
+          </p>
+        )
+        : (
+          <>
+            {children}
+            <div className="section__button">
+              <Link to={listPath(resource)}>
+                <button
+                  type="button"
+                >
+                  View All
+                </button>
+              </Link>
+            </div>
+          </>
+        )
+      }
+    </Section>
+  );
+};
+
+Popular.propTypes = {
+  resource: PropTypes.oneOf(Object.keys(RESOURCES)).isRequired,
+  data: resourceDataShape.isRequired,
+  children: PropTypes.node.isRequired,
+};
+
+const cards = (resource, items) => items.map(item => (
+  <ListItem
+    key={item.name}
+    item={item}
+    type={resource}
+    imagePosition={RESOURCES[resource].imagePosition.card}
+    view="grid"
+  />
+));
+
+const MainHome = ({ resources }) => {
   return (
     <div className="home">
-  
-      {/* Starships Section */}
-      <Section
-        title="Popular Starships"
-      >
-        {
-          !isEmpty(loadingStarshipsError.message)
-          ? (
-            <p>
-              {`There was an error while loading Star Wars Starships: ${loadingStarshipsError.message}`}
-            </p>
-          )
-          : (
-            <>
-              {
-                starships.slice(0, 6).map(starship => (
-                  <ListItem
-                    item={starship}
-                    key={starship.name}
-                    imagePosition="top"
-                    type="starships"
-                    name={starship.name}
-                    model={starship.model}
-                    cargo={starship.cargo_capacity}
-                    view="grid"
-                  />
-                ))
-              }
-              <div className="section__button">
-                <Link to="/starships">
-                  <button
-                    type="button"
-                  >
-                    View All
-                  </button>
-                </Link>
-              </div>
-            </>
-          )
-        }
-      </Section>
+      <Popular resource="starships" data={resources.starships}>
+        {cards('starships', resources.starships.items.slice(0, 6))}
+      </Popular>
 
+      <Popular resource="planets" data={resources.planets}>
+        <Slider
+          items={resources.planets.items.slice(0, 9)}
+          resultsPerView={3}
+          type="planets"
+        />
+      </Popular>
 
-      {/* Planets Section */}
-      <Section
-        title="Popular Planets"
-      >
-        {
-          !isEmpty(loadingPlanetsError.message)
-          ? (
-            <p>
-              {`There was an error while loading Star Wars Planets: ${loadingPlanetsError.message}`}
-            </p>
-          )
-          : (
-            <>
-              <Slider
-                items={planets.slice(0, 9)}
-                resultsPerView={3}
-                type="planets"
-              />
-              <div className="section__button">
-                <Link to="/planets">
-                  <button
-                    type="button"
-                  >
-                    View All
-                  </button>
-                </Link>
-              </div>
-            </>
-          )
-        }
-      </Section>
-
-      {/* Characters Section */}
-      <Section
-        title="Popular Characters"
-      >
-        {
-          !isEmpty(loadingCharactersError.message)
-          ? (
-            <p>
-              {`There was an error while loading Star Wars Characters: ${loadingCharactersError.message}`}
-            </p>
-          )
-          : (
-            <>
-              {
-                characters.slice(0, 4).map(character => (
-                  <ListItem
-                    item={character}
-                    key={character.name}
-                    imagePosition="left"
-                    type="characters"
-                    name={character.name}
-                    birthyear={character.birth_year}
-                    gender={character.gender}
-                    view="grid"
-                  />
-                ))
-              }
-              <div className="section__button">
-                <Link to="/characters">
-                  <button
-                    type="button"
-                  >
-                    View All
-                  </button>
-                </Link>
-              </div>
-            </>
-          )
-        }
-      </Section>
+      <Popular resource="characters" data={resources.characters}>
+        {cards('characters', resources.characters.items.slice(0, 4))}
+      </Popular>
     </div>
   );
 };
 
 MainHome.propTypes = {
-  characters: PropTypes.arrayOf(PropTypes.object).isRequired,
-  planets: PropTypes.arrayOf(PropTypes.object).isRequired,
-  starships: PropTypes.arrayOf(PropTypes.object).isRequired,
-  loadingCharactersError: PropTypes.object.isRequired,
-  loadingPlanetsError: PropTypes.object.isRequired,
-  loadingStarshipsError: PropTypes.object.isRequired,
+  resources: resourcesShape.isRequired,
 };
 
 export default MainHome;

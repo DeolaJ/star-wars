@@ -1,85 +1,30 @@
 import { API_BASE_URL, API_PATHS } from '../config';
+import { RESOURCE_KEYS } from '../resources';
 import { fetchFromAPI, toApiPath } from './api';
 import { getCached, setCached } from './cache';
+import { stateKeys } from './selectors';
 
 export const FETCH_PAGE_START = "FETCH_PAGE_START";
 export const FETCH_PAGE_SUCCESS = "FETCH_PAGE_SUCCESS";
 export const FETCH_PAGE_FAILURE = "FETCH_PAGE_FAILURE";
+export const SEARCH_RESOURCE = "SEARCH_RESOURCE";
 export const SEARCH_ALL = "SEARCH_ALL";
-export const SEARCH_CHARACTERS = "SEARCH_CHARACTERS";
-export const SEARCH_PLANETS = "SEARCH_PLANETS";
-export const SEARCH_STARSHIPS = "SEARCH_STARSHIPS";
+export const RESET_SEARCH_RESOURCE = "RESET_SEARCH_RESOURCE";
 export const RESET_SEARCH_ALL = "RESET_SEARCH_ALL";
-export const RESET_SEARCH_CHARACTERS = "RESET_SEARCH_CHARACTERS";
-export const RESET_SEARCH_PLANETS = "RESET_SEARCH_PLANETS";
-export const RESET_SEARCH_STARSHIPS = "RESET_SEARCH_STARSHIPS";
 export const SET_RECENTLY_VIEWED = "SET_RECENTLY_VIEWED";
 export const SET_DESCRIPTION = "SET_DESCRIPTION";
 
-const fetchPageStart = (payload) => ({
-  type: FETCH_PAGE_START,
-  payload,
-})
+const action = (type) => (payload) => ({ type, payload });
 
-const fetchPageSuccess = (payload) => ({
-  type: FETCH_PAGE_SUCCESS,
-  payload,
-})
-
-const fetchPageFailure = (payload) => ({
-  type: FETCH_PAGE_FAILURE,
-  payload,
-})
-
-const searchAll = (payload) => ({
-  type: SEARCH_ALL,
-  payload,
-})
-
-const searchCharacters = (payload) => ({
-  type: SEARCH_CHARACTERS,
-  payload,
-})
-
-const searchPlanets = (payload) => ({
-  type: SEARCH_PLANETS,
-  payload,
-})
-
-const searchStarships = (payload) => ({
-  type: SEARCH_STARSHIPS,
-  payload,
-})
-
-const resetAll = (payload) => ({
-  type: RESET_SEARCH_ALL,
-  payload,
-})
-
-const resetCharacters = (payload) => ({
-  type: RESET_SEARCH_CHARACTERS,
-  payload,
-})
-
-const resetPlanets = (payload) => ({
-  type: RESET_SEARCH_PLANETS,
-  payload,
-})
-
-const resetStarships = (payload) => ({
-  type: RESET_SEARCH_STARSHIPS,
-  payload,
-})
-
-const recentlyViewed = (payload) => ({
-  type: SET_RECENTLY_VIEWED,
-  payload,
-})
-
-const setDescription = (payload) => ({
-  type: SET_DESCRIPTION,
-  payload,
-})
+const fetchPageStart = action(FETCH_PAGE_START);
+const fetchPageSuccess = action(FETCH_PAGE_SUCCESS);
+const fetchPageFailure = action(FETCH_PAGE_FAILURE);
+const searchResource = action(SEARCH_RESOURCE);
+const searchAll = action(SEARCH_ALL);
+const resetSearchResource = action(RESET_SEARCH_RESOURCE);
+const resetAll = action(RESET_SEARCH_ALL);
+const recentlyViewed = action(SET_RECENTLY_VIEWED);
+const setDescription = action(SET_DESCRIPTION);
 
 // A response is only used, and cached, if it has the shape SWAPI returns.
 // Anything else (an HTML error page, a truncated body) is treated as a failure.
@@ -107,9 +52,10 @@ const getPage = async (path) => {
 
 // Loading Action Creators
 // SWAPI returns 10 results per page, which matches the page size of the list pages,
-// so a page of the UI is exactly one request.
+// so a page of the UI is exactly one request. Page 1 is the initial load of a
+// resource; later pages are fetched when the user opens them.
 export const doFetchPage = (resource, page) => (dispatch, getState) => {
-  const paging = getState().app[`${resource}Paging`];
+  const paging = getState().app[stateKeys(resource).paging];
   if (paging.pages[page] || paging.loading[page]) {
     // Already loaded or on its way
     return Promise.resolve();
@@ -133,14 +79,6 @@ export const doFetchPage = (resource, page) => (dispatch, getState) => {
     }))
   })
 }
-
-// Only the first page is fetched up front; later pages load when they are opened
-export const doFetchCharacters = () => doFetchPage('characters', 1);
-export const doFetchPlanets = () => doFetchPage('planets', 1);
-export const doFetchStarships = () => doFetchPage('starships', 1);
-export const doFetchCharactersPage = (page) => doFetchPage('characters', page);
-export const doFetchPlanetsPage = (page) => doFetchPage('planets', page);
-export const doFetchStarshipsPage = (page) => doFetchPage('starships', page);
 
 // Search runs against the API so it covers every page, not only the loaded ones.
 // SWAPI also matches starship models, so results are narrowed to name matches
@@ -169,14 +107,15 @@ const fetchSearchResults = async (resource, param) => {
 };
 
 const getSearchResults = (state, resource, param) => {
-  const cache = state.app[`${resource}Search`];
+  const cache = state.app[stateKeys(resource).search];
   return param in cache ? Promise.resolve(cache[param]) : fetchSearchResults(resource, param);
 };
 
 // The latest query per search box, so slow responses for older queries are ignored
 const latestSearch = {};
 
-const searchResource = (resource, param, actionCreator, filteringKey) => async (dispatch, getState) => {
+// Filter Action Creators
+export const doSearch = (resource, param) => async (dispatch, getState) => {
   latestSearch[resource] = param;
   let results;
   let failed = false;
@@ -188,25 +127,15 @@ const searchResource = (resource, param, actionCreator, filteringKey) => async (
     failed = true;
   }
   if (latestSearch[resource] !== param) return;
-  return dispatch(actionCreator({
-    [resource]: results,
-    param,
-    [filteringKey]: true,
-    failed,
-  }))
+  return dispatch(searchResource({ resource, param, results, failed }))
 };
-
-// Filter Action Creators
-export const doSearchCharacters = (param) => searchResource('characters', param, searchCharacters, 'isFilteringCharacters');
-export const doSearchPlanets = (param) => searchResource('planets', param, searchPlanets, 'isFilteringPlanets');
-export const doSearchStarships = (param) => searchResource('starships', param, searchStarships, 'isFilteringStarships');
 
 export const doSearchAll = (param) => async (dispatch, getState) => {
   latestSearch.all = param;
   const state = getState();
   const failed = {};
-  const [characters, planets, starships] = await Promise.all(
-    ['characters', 'planets', 'starships'].map(resource => (
+  const settled = await Promise.all(
+    RESOURCE_KEYS.map(resource => (
       getSearchResults(state, resource, param).catch(() => {
         failed[resource] = true;
         return [];
@@ -214,48 +143,18 @@ export const doSearchAll = (param) => async (dispatch, getState) => {
     ))
   );
   if (latestSearch.all !== param) return;
-  return dispatch(searchAll({
-    param,
-    characters,
-    planets,
-    starships,
-    isFilteringAll: true,
-    failed,
-  }))
+  const results = Object.fromEntries(RESOURCE_KEYS.map((resource, index) => [resource, settled[index]]));
+  return dispatch(searchAll({ param, results, failed }))
 }
 
-export const resetSearchCharacters = () => (dispatch) => {
-  latestSearch.characters = null;
-  return dispatch(resetCharacters({
-    allFilteredCharacters: [],
-    isFilteringCharacters: false
-  }))
-}
-
-export const resetSearchPlanets = () => (dispatch) => {
-  latestSearch.planets = null;
-  return dispatch(resetPlanets({
-    allFilteredStarships: [],
-    isFilteringPlanets: false
-  }))
-}
-
-export const resetSearchStarships = () => (dispatch) => {
-  latestSearch.starships = null;
-  return dispatch(resetStarships({
-    allFilteredStarships: [],
-    isFilteringStarships: false,
-  }))
+export const resetSearch = (resource) => (dispatch) => {
+  latestSearch[resource] = null;
+  return dispatch(resetSearchResource({ resource }))
 }
 
 export const resetSearchAll = () => (dispatch) => {
   latestSearch.all = null;
-  return dispatch(resetAll({
-    allFilteredCharacters: [],
-    allFilteredPlanets: [],
-    allFilteredStarships: [],
-    isFilteringAll: false,
-  }))
+  return dispatch(resetAll())
 }
 
 export const setRecentlyViewed = (type, item) => (dispatch) => (
@@ -269,10 +168,11 @@ export const setRecentlyViewed = (type, item) => (dispatch) => (
 // viewed) are used directly. Anything else, such as a description URL for an item
 // on a page that has not been loaded, is looked up through the search API.
 const findLoadedItem = (app, category, name) => {
+  const keys = stateKeys(category);
   const candidates = [
-    ...app[category],
+    ...app[keys.items],
     ...(app.recentlyViewed[category] || []),
-    ...Object.values(app[`${category}Search`]).flat(),
+    ...Object.values(app[keys.search]).flat(),
   ];
   return candidates.find(item => item.name && item.name.toLowerCase() === name);
 };
@@ -296,20 +196,11 @@ export const doSetDescription = (category, name) => async (dispatch, getState) =
 }
 
 export default {
-  doFetchCharacters,
-  doFetchPlanets,
-  doFetchStarships,
-  doFetchCharactersPage,
-  doFetchPlanetsPage,
-  doFetchStarshipsPage,
+  doFetchPage,
+  doSearch,
   doSearchAll,
-  doSearchCharacters,
-  doSearchPlanets,
-  doSearchStarships,
+  resetSearch,
   resetSearchAll,
-  resetSearchCharacters,
-  resetSearchPlanets,
-  resetSearchStarships,
   setRecentlyViewed,
   doSetDescription,
 }

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import ListItem from './list-item';
+import { RESOURCES, RESOURCE_KEYS } from '../../resources';
 
 const Slider = ({ 
   type, items, resultsPerView
@@ -26,17 +27,10 @@ const Slider = ({
         {
           currentItems.map(item => (
             <ListItem
+              key={item.name}
               item={item}
-              key={item.name} 
-              imagePosition={item.gender ? "left" : "top"}
-              name={item.name}
               type={type}
-              population={item.population ? item.population : null}
-              temperature={item.temperature ? item.temperature : null}
-              birthyear={item.birth_year ? item.birth_year : null}
-              gender={item.gender ? item.gender : null}
-              model={item.model ? item.model : null}
-              cargo={item.cargo ? item.cargo : null}
+              imagePosition={RESOURCES[type].imagePosition.card}
               view="grid"
             />
           ))
@@ -67,7 +61,7 @@ const Slider = ({
 Slider.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   resultsPerView: PropTypes.number.isRequired,
-  type: PropTypes.string.isRequired,
+  type: PropTypes.oneOf(RESOURCE_KEYS).isRequired,
 };
 
 export default Slider;

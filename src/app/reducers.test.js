@@ -14,14 +14,14 @@ describe('app reducer', () => {
   });
 
   it('stores character search results and caches them by query', () => {
-    const state = reducer(loaded, { type: types.SEARCH_CHARACTERS, payload: { characters: [characters[0]], param: 'LUKE', isFilteringCharacters: true } });
+    const state = reducer(loaded, { type: types.SEARCH_RESOURCE, payload: { resource: 'characters', results: [characters[0]], param: 'LUKE' } });
     expect(state.allFilteredCharacters.map(c => c.name)).toEqual(['Luke Skywalker']);
     expect(state.isFilteringCharacters).toBe(true);
     expect(state.charactersSearch.LUKE).toHaveLength(1);
   });
 
   it('searches every category at once', () => {
-    const state = reducer(loaded, { type: types.SEARCH_ALL, payload: { param: 'o', characters: [characters[1]], planets: [{ name: 'Tatooine' }], starships: [], isFilteringAll: true } });
+    const state = reducer(loaded, { type: types.SEARCH_ALL, payload: { param: 'o', results: { characters: [characters[1]], planets: [{ name: 'Tatooine' }], starships: [] } } });
     expect(state.allFilteredCharacters).toHaveLength(1);
     expect(state.allFilteredPlanets).toHaveLength(1);
     expect(state.allFilteredStarships).toHaveLength(0);
@@ -31,13 +31,13 @@ describe('app reducer', () => {
 
   it('serves a repeated search from the cache', () => {
     const cached = { ...loaded, charactersSearch: { luke: [characters[0]] } };
-    const state = reducer(cached, { type: types.SEARCH_CHARACTERS, payload: { characters: [], param: 'luke', isFilteringCharacters: true } });
+    const state = reducer(cached, { type: types.SEARCH_RESOURCE, payload: { resource: 'characters', results: [], param: 'luke' } });
     expect(state.allFilteredCharacters).toEqual([characters[0]]);
   });
 
   it('resets a search', () => {
     const searching = { ...loaded, isFilteringAll: true, allFilteredCharacters: characters };
-    const state = reducer(searching, { type: types.RESET_SEARCH_ALL, payload: { allFilteredCharacters: [], allFilteredPlanets: [], allFilteredStarships: [], isFilteringAll: false } });
+    const state = reducer(searching, { type: types.RESET_SEARCH_ALL });
     expect(state.isFilteringAll).toBe(false);
     expect(state.allFilteredCharacters).toEqual([]);
   });
@@ -94,5 +94,80 @@ describe('app reducer', () => {
       expect(state.loadingPlanets).toBe(false);
       expect(state.loadingPlanetsError).toEqual({ message: 'Down' });
     });
+  });
+});
+
+describe('resource-generic state', () => {
+  const stateFor = (resource) => ({
+    items: resource,
+    paging: `${resource}Paging`,
+    loading: `loading${resource[0].toUpperCase()}${resource.slice(1)}`,
+    error: `loading${resource[0].toUpperCase()}${resource.slice(1)}Error`,
+    search: `${resource}Search`,
+    filtered: `allFiltered${resource[0].toUpperCase()}${resource.slice(1)}`,
+    isFiltering: `isFiltering${resource[0].toUpperCase()}${resource.slice(1)}`,
+  });
+
+  it.each(['characters', 'planets', 'starships'])('starts with the full set of state for %s', (resource) => {
+    const keys = stateFor(resource);
+    expect(defaultState[keys.items]).toEqual([]);
+    expect(defaultState[keys.paging]).toEqual({ count: 0, pages: {}, loading: {}, errors: {} });
+    expect(defaultState[keys.loading]).toBe(true);
+    expect(defaultState[keys.error]).toEqual({});
+    expect(defaultState[keys.search]).toEqual({});
+    expect(defaultState[keys.filtered]).toEqual([]);
+    expect(defaultState[keys.isFiltering]).toBe(false);
+  });
+
+  it('resets one resource search without touching the others', () => {
+    const searching = {
+      ...loaded,
+      isFilteringPlanets: true, allFilteredPlanets: [{ name: 'Tatooine' }],
+      isFilteringStarships: true, allFilteredStarships: [{ name: 'X-wing' }],
+    };
+    const state = reducer(searching, { type: types.RESET_SEARCH_RESOURCE, payload: { resource: 'planets' } });
+    expect(state.isFilteringPlanets).toBe(false);
+    expect(state.allFilteredPlanets).toEqual([]);
+    expect(state.isFilteringStarships).toBe(true);
+    expect(state.allFilteredStarships).toEqual([{ name: 'X-wing' }]);
+  });
+
+  it('shows a failed search as no results without remembering it', () => {
+    const state = reducer(loaded, { type: types.SEARCH_RESOURCE, payload: { resource: 'starships', results: [], param: 'wing', failed: true } });
+    expect(state.isFilteringStarships).toBe(true);
+    expect(state.allFilteredStarships).toEqual([]);
+    expect(state.starshipsSearch).not.toHaveProperty('wing');
+  });
+
+  it('only remembers the resources of a site-wide search that succeeded', () => {
+    const state = reducer(loaded, {
+      type: types.SEARCH_ALL,
+      payload: { param: 'wing', results: { characters: [], planets: [], starships: [{ name: 'X-wing' }] }, failed: { characters: true } },
+    });
+    expect(state.charactersSearch).not.toHaveProperty('wing');
+    expect(state.planetsSearch.wing).toEqual([]);
+    expect(state.starshipsSearch.wing).toHaveLength(1);
+  });
+
+  it('clears every resource on a site-wide reset and leaves the caches', () => {
+    const searching = { ...loaded, isFilteringAll: true, allFilteredPlanets: [{ name: 'Tatooine' }], planetsSearch: { tat: [{ name: 'Tatooine' }] } };
+    const state = reducer(searching, { type: types.RESET_SEARCH_ALL });
+    expect(state.isFilteringAll).toBe(false);
+    expect(state.allFilteredPlanets).toEqual([]);
+    expect(state.planetsSearch.tat).toHaveLength(1);
+  });
+
+  it('starts recently viewed for a category that has none yet', () => {
+    const state = reducer(loaded, { type: types.SET_RECENTLY_VIEWED, payload: { type: 'planets', item: { name: 'Hoth' } } });
+    expect(state.recentlyViewed.planets.map(p => p.name)).toEqual(['Hoth']);
+  });
+
+  it('describes a planet and a starship from their configuration', () => {
+    const planet = { name: 'Tatooine', rotation_period: '23', diameter: '10465', orbital_period: '304', climate: 'arid', gravity: '1 standard', terrain: 'desert, canyons', population: '200000', surface_water: '1' };
+    const starship = { name: 'X-wing', model: 'T-65', manufacturer: 'Incom', cost_in_credits: '149999', length: '12.5', max_atmosphering_speed: '1050', crew: '1', cargo_capacity: '110', passengers: '0', consumables: '1 week', hyperdrive_rating: '1.0', MGLT: '100', starship_class: 'Starfighter' };
+    expect(reducer(loaded, { type: types.SET_DESCRIPTION, payload: { category: 'planets', item: planet } }).descriptionItem.description)
+      .toContain('has desert and canyons terrains');
+    expect(reducer(loaded, { type: types.SET_DESCRIPTION, payload: { category: 'starships', item: starship } }).descriptionItem.description)
+      .toContain('X-wing is of the T-65 model and was manufactured by Incom');
   });
 });

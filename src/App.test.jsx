@@ -312,3 +312,27 @@ describe('App', () => {
     });
   });
 });
+
+describe('resource pages', () => {
+  it('summarises each card from the item and links it to the detail page', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    expect(screen.getByText(/Tatooine has a climate of arid, and a population of 200000/)).toBeInTheDocument();
+    const [firstLink] = screen.getAllByRole('link', { name: 'Read more' });
+    expect(firstLink).toHaveAttribute('href', '/description/planets/tatooine');
+  });
+
+  it('shows the gender on a character card wherever it appears', async () => {
+    mockFetch();
+    renderApp('/characters');
+    await screen.findByText('Starwars Characters');
+    expect(screen.getByText(/Leia was born in the year 19BBY, and is female/)).toBeInTheDocument();
+  });
+
+  it('names the resource in its own error message', async () => {
+    mockFetch({ [page('starships', 1)]: new Error('Network down') });
+    renderApp('/starships');
+    expect(await screen.findByText('There was an error while loading Star Wars Starships: Network down')).toBeInTheDocument();
+  });
+});

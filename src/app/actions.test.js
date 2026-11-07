@@ -10,14 +10,14 @@ const page = (resource, n) => `${API_ENDPOINTS[resource]}?page=${n}`;
 
 describe('initial load', () => {
   it.each([
-    ['doFetchCharacters', 'characters', 'loadingCharacters', 15],
-    ['doFetchPlanets', 'planets', 'loadingPlanets', 13],
-    ['doFetchStarships', 'starships', 'loadingStarships', 12],
-  ])('%s fetches only the first page', async (thunk, resource, loadingKey, total) => {
+    ['characters', 'loadingCharacters', 15],
+    ['planets', 'loadingPlanets', 13],
+    ['starships', 'loadingStarships', 12],
+  ])('fetches only the first page of %s', async (resource, loadingKey, total) => {
     const fetchSpy = mockFetch();
     const store = makeStore();
 
-    await store.dispatch(actions[thunk]());
+    await store.dispatch(actions.doFetchPage(resource, 1));
 
     const state = store.getState().app;
     expect(fetchedUrls(fetchSpy)).toEqual([page(resource, 1)]);
@@ -31,7 +31,7 @@ describe('initial load', () => {
   it('keeps the app loading until the first page arrives', async () => {
     mockFetch();
     const store = makeStore();
-    const promise = store.dispatch(actions.doFetchCharacters());
+    const promise = store.dispatch(actions.doFetchPage('characters', 1));
     expect(store.getState().app.loadingCharacters).toBe(true);
     await promise;
     expect(store.getState().app.loadingCharacters).toBe(false);
@@ -41,7 +41,7 @@ describe('initial load', () => {
     mockFetch({ [page('planets', 1)]: new Error('Network down') });
     const store = makeStore();
 
-    await store.dispatch(actions.doFetchPlanets());
+    await store.dispatch(actions.doFetchPage('planets', 1));
 
     const state = store.getState().app;
     expect(state.loadingPlanets).toBe(false);
@@ -52,7 +52,7 @@ describe('initial load', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
     const store = makeStore();
 
-    await store.dispatch(actions.doFetchStarships());
+    await store.dispatch(actions.doFetchPage('starships', 1));
 
     expect(store.getState().app.loadingStarshipsError.message).toBe('Request failed with status 404');
   });
@@ -62,9 +62,9 @@ describe('loading later pages', () => {
   it('fetches a page when asked and appends it to the loaded results', async () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
 
-    await store.dispatch(actions.doFetchCharactersPage(2));
+    await store.dispatch(actions.doFetchPage('characters', 2));
 
     const state = store.getState().app;
     expect(fetchedUrls(fetchSpy)).toEqual([page('characters', 1), page('characters', 2)]);
@@ -77,11 +77,11 @@ describe('loading later pages', () => {
   it('does not fetch a page that is already loaded', async () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
-    await store.dispatch(actions.doFetchPlanets());
-    await store.dispatch(actions.doFetchPlanetsPage(2));
+    await store.dispatch(actions.doFetchPage('planets', 1));
+    await store.dispatch(actions.doFetchPage('planets', 2));
 
-    await store.dispatch(actions.doFetchPlanetsPage(1));
-    await store.dispatch(actions.doFetchPlanetsPage(2));
+    await store.dispatch(actions.doFetchPage('planets', 1));
+    await store.dispatch(actions.doFetchPage('planets', 2));
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
@@ -91,8 +91,8 @@ describe('loading later pages', () => {
     const store = makeStore();
 
     await Promise.all([
-      store.dispatch(actions.doFetchStarshipsPage(2)),
-      store.dispatch(actions.doFetchStarshipsPage(2)),
+      store.dispatch(actions.doFetchPage('starships', 2)),
+      store.dispatch(actions.doFetchPage('starships', 2)),
     ]);
 
     expect(fetchedUrls(fetchSpy)).toEqual([page('starships', 2)]);
@@ -101,9 +101,9 @@ describe('loading later pages', () => {
   it('records a failed page without touching the initial load error, and allows a retry', async () => {
     const fetchSpy = mockFetch({ [page('characters', 2)]: new Error('Timeout') });
     const store = makeStore();
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
 
-    await store.dispatch(actions.doFetchCharactersPage(2));
+    await store.dispatch(actions.doFetchPage('characters', 2));
     let state = store.getState().app;
     expect(state.charactersPaging.errors[2].message).toBe('Timeout');
     expect(state.charactersPaging.loading[2]).toBeUndefined();
@@ -111,7 +111,7 @@ describe('loading later pages', () => {
 
     fetchSpy.mockRestore();
     mockFetch();
-    await store.dispatch(actions.doFetchCharactersPage(2));
+    await store.dispatch(actions.doFetchPage('characters', 2));
     state = store.getState().app;
     expect(state.charactersPaging.errors[2]).toBeUndefined();
     expect(state.charactersPaging.pages[2]).toHaveLength(5);
@@ -122,9 +122,9 @@ describe('search', () => {
   it('searches every page through the API, not just the loaded ones', async () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
 
-    await store.dispatch(actions.doSearchCharacters('Extra'));
+    await store.dispatch(actions.doSearch('characters', 'Extra'));
 
     const state = store.getState().app;
     expect(fetchedUrls(fetchSpy)).toContain(`${API_ENDPOINTS.characters}?search=Extra`);
@@ -137,9 +137,9 @@ describe('search', () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchPlanets('tatoo'));
-    await store.dispatch(actions.resetSearchPlanets());
-    await store.dispatch(actions.doSearchPlanets('tatoo'));
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
+    await store.dispatch(actions.resetSearch('planets'));
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(store.getState().app.allFilteredPlanets.map(p => p.name)).toEqual(['Tatooine']);
@@ -154,7 +154,7 @@ describe('search', () => {
     });
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchCharacters(term));
+    await store.dispatch(actions.doSearch('characters', term));
 
     expect(store.getState().app.allFilteredCharacters).toHaveLength(3);
   });
@@ -165,7 +165,7 @@ describe('search', () => {
     });
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchStarships('T-65'));
+    await store.dispatch(actions.doSearch('starships', 'T-65'));
 
     expect(store.getState().app.allFilteredStarships).toEqual([]);
   });
@@ -195,8 +195,8 @@ describe('search', () => {
     });
     const store = makeStore();
 
-    const slow = store.dispatch(actions.doSearchCharacters('luke'));
-    await store.dispatch(actions.doSearchCharacters('leia'));
+    const slow = store.dispatch(actions.doSearch('characters', 'luke'));
+    await store.dispatch(actions.doSearch('characters', 'leia'));
     releaseSlow();
     await slow;
 
@@ -210,8 +210,8 @@ describe('search', () => {
     }));
     const store = makeStore();
 
-    const pending = store.dispatch(actions.doSearchPlanets('tat'));
-    await store.dispatch(actions.resetSearchPlanets());
+    const pending = store.dispatch(actions.doSearch('planets', 'tat'));
+    await store.dispatch(actions.resetSearch('planets'));
     release();
     await pending;
 
@@ -223,7 +223,7 @@ describe('description', () => {
   it('uses a loaded item without fetching', async () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
     fetchSpy.mockClear();
 
     await store.dispatch(actions.doSetDescription('characters', 'leia organa'));
@@ -235,7 +235,7 @@ describe('description', () => {
   it('looks up an item from a page that has not been loaded', async () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
 
     await store.dispatch(actions.doSetDescription('characters', 'extra person 3'));
 
@@ -262,11 +262,11 @@ describe('caching between visits', () => {
   it('serves a page from the cache on the next visit without a request', async () => {
     at(T0);
     const fetchSpy = mockFetch();
-    await makeStore().dispatch(actions.doFetchCharactersPage(2));
+    await makeStore().dispatch(actions.doFetchPage('characters', 2));
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     const revisit = makeStore();
-    await revisit.dispatch(actions.doFetchCharactersPage(2));
+    await revisit.dispatch(actions.doFetchPage('characters', 2));
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const state = revisit.getState().app;
@@ -278,11 +278,11 @@ describe('caching between visits', () => {
     at(T0);
     const fetchSpy = mockFetch();
     const first = makeStore();
-    await Promise.all([actions.doFetchCharacters(), actions.doFetchPlanets(), actions.doFetchStarships()].map(first.dispatch));
+    await Promise.all([actions.doFetchPage('characters', 1), actions.doFetchPage('planets', 1), actions.doFetchPage('starships', 1)].map(first.dispatch));
     fetchSpy.mockClear();
 
     const revisit = makeStore();
-    await Promise.all([actions.doFetchCharacters(), actions.doFetchPlanets(), actions.doFetchStarships()].map(revisit.dispatch));
+    await Promise.all([actions.doFetchPage('characters', 1), actions.doFetchPage('planets', 1), actions.doFetchPage('starships', 1)].map(revisit.dispatch));
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(revisit.getState().app.loadingCharacters).toBe(false);
@@ -292,19 +292,19 @@ describe('caching between visits', () => {
   it('requests a page again once the cached copy has expired, and refreshes the cache', async () => {
     at(T0);
     const fetchSpy = mockFetch();
-    await makeStore().dispatch(actions.doFetchPlanets());
+    await makeStore().dispatch(actions.doFetchPage('planets', 1));
 
     at(T0 + DAY - 1);
-    await makeStore().dispatch(actions.doFetchPlanets());
+    await makeStore().dispatch(actions.doFetchPage('planets', 1));
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     at(T0 + DAY);
-    await makeStore().dispatch(actions.doFetchPlanets());
+    await makeStore().dispatch(actions.doFetchPage('planets', 1));
     expect(fetchSpy).toHaveBeenCalledTimes(2);
 
     // The new copy is good for another day from when it was fetched
     at(T0 + DAY + DAY - 1);
-    await makeStore().dispatch(actions.doFetchPlanets());
+    await makeStore().dispatch(actions.doFetchPage('planets', 1));
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -316,13 +316,13 @@ describe('caching between visits', () => {
     const url = page('starships', 1);
     const fetchSpy = mockFetch({ [url]: failure });
     const store = makeStore();
-    await store.dispatch(actions.doFetchStarships());
+    await store.dispatch(actions.doFetchPage('starships', 1));
     expect(store.getState().app.loadingStarshipsError.message).toBeTruthy();
 
     fetchSpy.mockRestore();
     const retrySpy = mockFetch();
     const revisit = makeStore();
-    await revisit.dispatch(actions.doFetchStarships());
+    await revisit.dispatch(actions.doFetchPage('starships', 1));
 
     // One request for the page; swapi.dev failed moments ago, so the mirror goes first
     expect(fetchedUrls(retrySpy)).toEqual([mirrorUrl(url)]);
@@ -331,21 +331,21 @@ describe('caching between visits', () => {
 
   it('does not cache an HTTP error response', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 500, json: async () => ({ results: [], count: 0 }) });
-    await makeStore().dispatch(actions.doFetchCharacters());
+    await makeStore().dispatch(actions.doFetchPage('characters', 1));
 
     fetchSpy.mockRestore();
     const retrySpy = mockFetch();
-    await makeStore().dispatch(actions.doFetchCharacters());
+    await makeStore().dispatch(actions.doFetchPage('characters', 1));
     expect(retrySpy).toHaveBeenCalledTimes(1);
   });
 
   it('serves a search from the cache on the next visit, whatever the letter case', async () => {
     at(T0);
     const fetchSpy = mockFetch();
-    await makeStore().dispatch(actions.doSearchCharacters('Extra'));
+    await makeStore().dispatch(actions.doSearch('characters', 'Extra'));
 
     const revisit = makeStore();
-    await revisit.dispatch(actions.doSearchCharacters('extra'));
+    await revisit.dispatch(actions.doSearch('characters', 'extra'));
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(revisit.getState().app.allFilteredCharacters).toHaveLength(5);
@@ -358,7 +358,7 @@ describe('caching between visits', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(3);
 
     const revisit = makeStore();
-    await revisit.dispatch(actions.doSearchStarships('wing'));
+    await revisit.dispatch(actions.doSearch('starships', 'wing'));
     expect(fetchSpy).toHaveBeenCalledTimes(3);
     expect(revisit.getState().app.allFilteredStarships.map(s => s.name)).toEqual(['X-wing']);
   });
@@ -366,9 +366,9 @@ describe('caching between visits', () => {
   it('searches the API again after the cached result expires', async () => {
     at(T0);
     const fetchSpy = mockFetch();
-    await makeStore().dispatch(actions.doSearchPlanets('tatoo'));
+    await makeStore().dispatch(actions.doSearch('planets', 'tatoo'));
     at(T0 + DAY);
-    await makeStore().dispatch(actions.doSearchPlanets('tatoo'));
+    await makeStore().dispatch(actions.doSearch('planets', 'tatoo'));
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -380,7 +380,7 @@ describe('caching between visits', () => {
       [`${base}&page=2`]: new Error('Timeout'),
     });
     const store = makeStore();
-    await store.dispatch(actions.doSearchCharacters(term));
+    await store.dispatch(actions.doSearch('characters', term));
     // A failed search shows no results, as before, and is not stored in memory either
     expect(store.getState().app.allFilteredCharacters).toEqual([]);
     expect(store.getState().app.charactersSearch).not.toHaveProperty(term);
@@ -391,7 +391,7 @@ describe('caching between visits', () => {
       [`${base}&page=2`]: { count: 3, next: null, results: [{ name: 'Person 3' }] },
     });
     const revisit = makeStore();
-    await revisit.dispatch(actions.doSearchCharacters(term));
+    await revisit.dispatch(actions.doSearch('characters', term));
     expect(retrySpy).toHaveBeenCalledTimes(2);
     expect(revisit.getState().app.allFilteredCharacters).toHaveLength(3);
   });
@@ -399,13 +399,13 @@ describe('caching between visits', () => {
   it('retries a failed search in the same visit instead of remembering the failure', async () => {
     const fetchSpy = mockFetch({ [`${API_ENDPOINTS.planets}?search=tatoo`]: new Error('Down') });
     const store = makeStore();
-    await store.dispatch(actions.doSearchPlanets('tatoo'));
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
     expect(store.getState().app.allFilteredPlanets).toEqual([]);
 
     fetchSpy.mockRestore();
     mockFetch();
-    await store.dispatch(actions.resetSearchPlanets());
-    await store.dispatch(actions.doSearchPlanets('tatoo'));
+    await store.dispatch(actions.resetSearch('planets'));
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
     expect(store.getState().app.allFilteredPlanets.map(p => p.name)).toEqual(['Tatooine']);
   });
 
@@ -447,16 +447,16 @@ describe('caching between visits', () => {
       return Promise.resolve({ ok: true, json: async () => ({ count: 13, results: [{ name: 'New Planet' }] }) });
     });
     const now = at(T0);
-    const oldVisit = makeStore().dispatch(actions.doFetchPlanetsPage(2));
+    const oldVisit = makeStore().dispatch(actions.doFetchPage('planets', 2));
     now.mockReturnValue(T0 + 1000);
-    await makeStore().dispatch(actions.doFetchPlanetsPage(2));
+    await makeStore().dispatch(actions.doFetchPage('planets', 2));
     now.mockReturnValue(T0 + 2000);
     releaseOld();
     await oldVisit;
 
     vi.mocked(globalThis.fetch).mockClear();
     const revisit = makeStore();
-    await revisit.dispatch(actions.doFetchPlanetsPage(2));
+    await revisit.dispatch(actions.doFetchPage('planets', 2));
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(revisit.getState().app.planetsPaging.pages[2].map(p => p.name)).toEqual(['New Planet']);
   });
@@ -469,7 +469,7 @@ describe('fallback API', () => {
     const fetchSpy = mockFetch({}, { down: ['primary'] });
     const store = makeStore();
 
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
 
     const state = store.getState().app;
     expect(fetchedUrls(fetchSpy)).toEqual([page('characters', 1), mirrorPage('characters', 1)]);
@@ -482,10 +482,10 @@ describe('fallback API', () => {
   it('loads later pages from the mirror, going straight to it once swapi.dev has failed', async () => {
     const fetchSpy = mockFetch({}, { down: ['primary'] });
     const store = makeStore();
-    await store.dispatch(actions.doFetchPlanets());
+    await store.dispatch(actions.doFetchPage('planets', 1));
     fetchSpy.mockClear();
 
-    await store.dispatch(actions.doFetchPlanetsPage(2));
+    await store.dispatch(actions.doFetchPage('planets', 2));
 
     expect(fetchedUrls(fetchSpy)).toEqual([mirrorPage('planets', 2)]);
     expect(store.getState().app.planetsPaging.pages[2]).toHaveLength(3);
@@ -495,7 +495,7 @@ describe('fallback API', () => {
     mockFetch({}, { down: ['primary'] });
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchCharacters('extra'));
+    await store.dispatch(actions.doSearch('characters', 'extra'));
 
     expect(store.getState().app.allFilteredCharacters).toHaveLength(5);
     expect(store.getState().app.isFilteringCharacters).toBe(true);
@@ -511,7 +511,7 @@ describe('fallback API', () => {
     });
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchCharacters(term));
+    await store.dispatch(actions.doSearch('characters', term));
 
     expect(store.getState().app.allFilteredCharacters.map(c => c.name)).toEqual(['Person 1', 'Person 2', 'Person 3']);
     expect(fetchedUrls(fetchSpy).map(url => url.replace(/^https:\/\/[^/]+\/api\//, ''))).toEqual([path, `${path}&page=2`, `${path}&page=2`]);
@@ -526,7 +526,7 @@ describe('fallback API', () => {
     }, { down: ['primary'] });
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchCharacters(term));
+    await store.dispatch(actions.doSearch('characters', term));
 
     expect(store.getState().app.allFilteredCharacters).toHaveLength(3);
   });
@@ -544,7 +544,7 @@ describe('fallback API', () => {
     const fetchSpy = mockFetch({}, { down: ['primary', 'mirror'] });
     const store = makeStore();
 
-    await store.dispatch(actions.doFetchStarships());
+    await store.dispatch(actions.doFetchPage('starships', 1));
 
     const state = store.getState().app;
     expect(fetchedUrls(fetchSpy)).toEqual([page('starships', 1), mirrorPage('starships', 1)]);
@@ -556,17 +556,17 @@ describe('fallback API', () => {
   it('records a page error when both servers are down and recovers on retry', async () => {
     const fetchSpy = mockFetch();
     const store = makeStore();
-    await store.dispatch(actions.doFetchCharacters());
+    await store.dispatch(actions.doFetchPage('characters', 1));
     fetchSpy.mockRestore();
 
     mockFetch({}, { down: ['primary', 'mirror'] });
-    await store.dispatch(actions.doFetchCharactersPage(2));
+    await store.dispatch(actions.doFetchPage('characters', 2));
     expect(store.getState().app.charactersPaging.errors[2].message).toBe('Failed to fetch');
     expect(store.getState().app.loadingCharactersError).toEqual({});
 
     vi.mocked(globalThis.fetch).mockRestore();
     mockFetch({}, { down: ['primary'] });
-    await store.dispatch(actions.doFetchCharactersPage(2));
+    await store.dispatch(actions.doFetchPage('characters', 2));
     expect(store.getState().app.charactersPaging.errors[2]).toBeUndefined();
     expect(store.getState().app.charactersPaging.pages[2]).toHaveLength(5);
   });
@@ -575,7 +575,7 @@ describe('fallback API', () => {
     mockFetch({}, { down: ['primary', 'mirror'] });
     const store = makeStore();
 
-    await store.dispatch(actions.doSearchPlanets('tatoo'));
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
 
     expect(store.getState().app.allFilteredPlanets).toEqual([]);
     expect(store.getState().app.planetsSearch).not.toHaveProperty('tatoo');
@@ -583,8 +583,8 @@ describe('fallback API', () => {
 
   it('caches mirror responses under the swapi.dev URL, so a later visit uses them', async () => {
     const fetchSpy = mockFetch({}, { down: ['primary'] });
-    await makeStore().dispatch(actions.doFetchPlanetsPage(2));
-    await makeStore().dispatch(actions.doSearchStarships('wing'));
+    await makeStore().dispatch(actions.doFetchPage('planets', 2));
+    await makeStore().dispatch(actions.doSearch('starships', 'wing'));
     expect(localStorage.getItem(`swapi-cache:v1:${page('planets', 2)}`)).not.toBeNull();
     fetchSpy.mockClear();
 
@@ -592,20 +592,20 @@ describe('fallback API', () => {
     fetchSpy.mockRestore();
     const healthy = mockFetch();
     const revisit = makeStore();
-    await revisit.dispatch(actions.doFetchPlanetsPage(2));
-    await revisit.dispatch(actions.doSearchStarships('wing'));
+    await revisit.dispatch(actions.doFetchPage('planets', 2));
+    await revisit.dispatch(actions.doSearch('starships', 'wing'));
     expect(healthy).not.toHaveBeenCalled();
     expect(revisit.getState().app.allFilteredStarships.map(s => s.name)).toEqual(['X-wing']);
   });
 
   it('serves cached data even when both servers are down', async () => {
     const fetchSpy = mockFetch();
-    await makeStore().dispatch(actions.doFetchCharacters());
+    await makeStore().dispatch(actions.doFetchPage('characters', 1));
     fetchSpy.mockRestore();
 
     const offline = mockFetch({}, { down: ['primary', 'mirror'] });
     const revisit = makeStore();
-    await revisit.dispatch(actions.doFetchCharacters());
+    await revisit.dispatch(actions.doFetchPage('characters', 1));
 
     expect(offline).not.toHaveBeenCalled();
     expect(revisit.getState().app.loadingCharactersError).toEqual({});

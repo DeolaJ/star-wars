@@ -35,3 +35,6 @@ jobs:
       - name: Test
         # vitest watches by default; test:run is the single-pass script
         run: npm run test:run
+
+      - name: Build
+        run: npm run build

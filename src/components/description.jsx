@@ -8,6 +8,7 @@ import RecentlyViewed from './partials/recently-viewed';
 import RightChevron from '../assets/chevron-right.svg';
 import LeftChevron from '../assets/chevron-left.svg';
 import { artworkFor, SIZES } from './partials/artwork';
+import { descriptionPath } from '../resources';
 
 const Description = ({
   recentlyViewed, descriptionItem, doSetDescription, 
@@ -24,8 +25,8 @@ const Description = ({
   });
 
   const getRecentlyViewed = useRef((recentlyViewed) => {
-    setPreviousLink(`/description/${category}/${recentlyViewed[category][recentlyViewed[category].length-2].name.split(" ").join("_").toLowerCase()}`);
-    setNextLink(`/description/${category}/${recentlyViewed[category][0].name.split(" ").join("_").toLowerCase()}`);
+    setPreviousLink(descriptionPath(category, recentlyViewed[category][recentlyViewed[category].length - 2].name));
+    setNextLink(descriptionPath(category, recentlyViewed[category][0].name));
   })
 
   useEffect(() => getItemInfo.current(category), [category]);
