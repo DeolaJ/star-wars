@@ -38,14 +38,14 @@ const Pagination = ({
       </ul>
       <div className="pagination__controls">
         <button
-          typ="button"
+          type="button"
           onClick={() => (currentPage > 1) && changeResultPage(currentPage - 1)}
           disabled={currentPage === 1}
         >
           <img src={LeftChevron} alt="previous icon" />
         </button>
         <button
-          typ="button"
+          type="button"
           onClick={() => (currentPage < parts) && changeResultPage(currentPage + 1)}
           disabled={currentPage === (parts)}
         >

@@ -15,7 +15,7 @@ A rough plan for the work ahead. Estimates are approximate.
 - [x] Move the hard-coded `swapi.dev` URLs into one config value, with a fallback mirror (`swapi.py4e.com`) when the API is down
 - [x] Load pages on demand instead of fetching every page of results up front
 - [x] Cache responses between visits (localStorage, 24-hour expiry)
-- [ ] Lazy-load images and serve them as WebP
+- [x] Lazy-load images and serve them as WebP
 
 ## Features (about 6 hours)
 
@@ -26,7 +26,7 @@ A rough plan for the work ahead. Estimates are approximate.
 
 ## Quality (about 6 hours)
 
-- [ ] Replace the default CRA test, which still looks for "learn react", with tests for the reducers, action creators and main pages
+- [x] Replace the default CRA test, which still looks for "learn react", with tests for the reducers, action creators and main pages
 - [ ] Accessibility pass on search, pagination and the slider (the `jsx-a11y` lint rules are already on)
 - [ ] Error and empty states for failed or empty searches
 - [ ] GitHub Actions workflow for lint, tests and build

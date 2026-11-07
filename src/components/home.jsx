@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import isEmpty from 'lodash/isEmpty';
 import PropTypes from 'prop-types';
 import MainHome from './mainhome';
 import SearchResult from './partials/search-result';

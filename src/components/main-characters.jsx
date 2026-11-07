@@ -10,29 +10,14 @@ import ListItem from './partials/list-item';
 import Dropdown from './partials/dropdown';
 
 const MainCharacters = ({
-  characters, charactersPaging, doFetchCharactersPage, loadingCharactersError, doSearchCharacters, resetSearchCharacters,
+  charactersPaging, doFetchCharactersPage, loadingCharactersError, doSearchCharacters, resetSearchCharacters,
   isFilteringCharacters, charactersSearch, allFilteredCharacters,
  }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchParams, setSearchParams] = useState('');
-  const [gender, setGender] = useState('all');
   const [view, setView] = useState('grid');
   const resultsPerPage = 10;
   const imagePosition = 'left';
-  const genderOptions = [
-    {
-      label: 'All',
-      value: 'all'
-    },
-    {
-      label: 'Male',
-      value: 'male'
-    },
-    {
-      label: 'Female',
-      value: 'female'
-    },
-  ];
 
   const viewOptions = [
     {
@@ -44,18 +29,7 @@ const MainCharacters = ({
       value: 'list'
     },
   ];
-  const recentResultsEndIndex = currentPage * resultsPerPage;
-  const firstResultIndex = recentResultsEndIndex - resultsPerPage;
-  let currentCharacters = charactersPaging.pages[currentPage] || [];
-
-  // Filter Characters by Gender
-  const doFilterGender = (gender) => (
-    characters.filter(character => {
-      const characterGender = character.gender.toLowerCase();
-      const genderfilter = gender.toLowerCase();
-      return characterGender === genderfilter;
-    })
-  );
+  const currentCharacters = charactersPaging.pages[currentPage] || [];
 
   const performSearch = useRef(debounce((searchParams) => {
     if (searchParams.length > 0) {
@@ -64,14 +38,6 @@ const MainCharacters = ({
       resetSearchCharacters()
     }
   }, 1000));
-
-  const updatedFilter = useRef((characters) => {
-    if (gender === 'all') {
-      currentCharacters = characters.slice(firstResultIndex, recentResultsEndIndex);
-    } else {
-      currentCharacters = doFilterGender(gender)
-    }
-  });
 
   useEffect(() => performSearch.current(searchParams), [searchParams]);
 
@@ -86,7 +52,6 @@ const MainCharacters = ({
 
   const pageError = charactersPaging.errors[currentPage];
   const pageLoading = charactersPaging.loading[currentPage];
-  // useEffect(() => updatedFilter.current(characters), [gender, characters]);
 
   return (
     <Section
@@ -103,11 +68,6 @@ const MainCharacters = ({
           <>
             <div className="filter-group">
               <div className="filter-group__left">
-                <Dropdown
-                  options={genderOptions}
-                  setValue={gender}
-                  changeSetValue={setGender}
-                />
                 <Dropdown
                   options={viewOptions}
                   setValue={view}
@@ -191,6 +151,9 @@ MainCharacters.propTypes = {
   loadingCharactersError: PropTypes.object.isRequired,
   doSearchCharacters: PropTypes.func.isRequired,
   resetSearchCharacters: PropTypes.func.isRequired,
+  isFilteringCharacters: PropTypes.bool.isRequired,
+  charactersSearch: PropTypes.objectOf(PropTypes.array).isRequired,
+  allFilteredCharacters: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 export default MainCharacters;

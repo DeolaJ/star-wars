@@ -156,6 +156,9 @@ MainPlanets.propTypes = {
   loadingPlanetsError: PropTypes.object.isRequired,
   doSearchPlanets: PropTypes.func.isRequired,
   resetSearchPlanets: PropTypes.func.isRequired,
+  isFilteringPlanets: PropTypes.bool.isRequired,
+  planetsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
+  allFilteredPlanets: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 export default MainPlanets;

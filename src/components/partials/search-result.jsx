@@ -140,6 +140,7 @@ const SearchResult = ({
 SearchResult.propTypes = {
   type: PropTypes.string.isRequired,
   category: PropTypes.string,
+  view: PropTypes.string,
   charactersSearch: PropTypes.objectOf(PropTypes.array),
   planetsSearch: PropTypes.objectOf(PropTypes.array),
   starshipsSearch: PropTypes.objectOf(PropTypes.array),

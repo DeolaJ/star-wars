@@ -155,6 +155,9 @@ MainStarships.propTypes = {
   loadingStarshipsError: PropTypes.object.isRequired,
   doSearchStarships: PropTypes.func.isRequired,
   resetSearchStarships: PropTypes.func.isRequired,
+  isFilteringStarships: PropTypes.bool.isRequired,
+  starshipsSearch: PropTypes.objectOf(PropTypes.array).isRequired,
+  allFilteredStarships: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 export default MainStarships;

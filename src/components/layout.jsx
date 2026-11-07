@@ -26,6 +26,8 @@ const Layout = ({
 
 Layout.propTypes = {
   children: PropTypes.node.isRequired,
+  // Set on the detail page, which supplies its own hero
+  description: PropTypes.bool,
   doSearchAll: PropTypes.func,
   resetSearchAll: PropTypes.func,
 };
