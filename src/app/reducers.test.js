@@ -172,3 +172,40 @@ describe('resource-generic state', () => {
       .toContain('X-wing is of the T-65 model and was manufactured by Incom');
   });
 });
+
+describe('related items', () => {
+  const path = 'people/1/';
+
+  it('starts with nothing fetched', () => {
+    expect(defaultState.items).toEqual({ byPath: {}, loading: {}, errors: {} });
+  });
+
+  it('tracks an item being fetched, then keeps it by path', () => {
+    let state = reducer(defaultState, { type: types.FETCH_ITEM_START, payload: { path } });
+    expect(state.items.loading[path]).toBe(true);
+    state = reducer(state, { type: types.FETCH_ITEM_SUCCESS, payload: { path, item: characters[0] } });
+    expect(state.items.byPath[path].name).toBe('Luke Skywalker');
+    expect(state.items.loading[path]).toBeUndefined();
+  });
+
+  it('records a failed item and forgets the failure when it is tried again', () => {
+    let state = reducer(defaultState, { type: types.FETCH_ITEM_START, payload: { path } });
+    state = reducer(state, { type: types.FETCH_ITEM_FAILURE, payload: { path, error: { message: 'Down' } } });
+    expect(state.items.errors[path]).toEqual({ message: 'Down' });
+    expect(state.items.loading[path]).toBeUndefined();
+    state = reducer(state, { type: types.FETCH_ITEM_START, payload: { path } });
+    expect(state.items.errors[path]).toBeUndefined();
+  });
+
+  it('does not list a recently viewed item twice', () => {
+    const before = { ...loaded, recentlyViewed: { characters: [characters[0]] } };
+    const state = reducer(before, { type: types.SET_RECENTLY_VIEWED, payload: { type: 'characters', item: characters[0] } });
+    expect(state.recentlyViewed.characters).toHaveLength(1);
+    expect(state).toBe(before);
+  });
+
+  it('remembers which resource the description belongs to', () => {
+    const state = reducer(loaded, { type: types.SET_DESCRIPTION, payload: { category: 'characters', item: characters[0] } });
+    expect(state.descriptionItem.resource).toBe('characters');
+  });
+});

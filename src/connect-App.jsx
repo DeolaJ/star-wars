@@ -10,6 +10,7 @@ const mapStateToProps = (state) => ({
   isFilteringAll: state.app.isFilteringAll,
   recentlyViewed: state.app.recentlyViewed,
   descriptionItem: state.app.descriptionItem,
+  items: state.app.items,
 })
 
 const mapDispatchToProps = (dispatch) => ({
@@ -33,6 +34,9 @@ const mapDispatchToProps = (dispatch) => ({
   },
   doSetDescription(category, name) {
     dispatch(appActions.doSetDescription(category, name))
+  },
+  doFetchItem(url) {
+    dispatch(appActions.doFetchItem(url))
   },
 })
 

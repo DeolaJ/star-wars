@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import App from './connect-App';
 import configureAppStore from './modules/store';
@@ -10,12 +10,16 @@ import { defaultState } from './app/reducers';
 import { API_ENDPOINTS } from './config';
 import { mockFetch, fetchedUrls, mirrorUrl } from './test/fixtures';
 
+// The current path, so a test can check the URL moved with the content
+const LocationProbe = () => <span data-testid="location">{useLocation().pathname}</span>;
+
 const renderApp = (route = '/') => {
   const store = configureAppStore({ app: { ...defaultState } });
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={[route]}>
         <App />
+        <LocationProbe />
       </MemoryRouter>
     </Provider>
   );
@@ -415,5 +419,144 @@ describe('films, species and vehicles', () => {
     expect(screen.getByText('Wookiee')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: '2' }));
     expect(await screen.findByText('Extra Species 1')).toBeInTheDocument();
+  });
+});
+
+describe('related items on the detail page', () => {
+  it('links a character to its homeworld, films, species, starships and vehicles without extra requests', async () => {
+    const fetchSpy = mockFetch();
+    renderApp('/description/characters/luke_skywalker');
+    await screen.findByRole('heading', { level: 1, name: 'Luke Skywalker' });
+
+    expect(await screen.findByRole('link', { name: 'Tatooine' })).toHaveAttribute('href', '/description/planets/tatooine');
+    expect(screen.getByRole('link', { name: 'A New Hope' })).toHaveAttribute('href', '/description/films/a_new_hope');
+    expect(screen.getByRole('link', { name: 'The Empire Strikes Back' })).toHaveAttribute('href', '/description/films/the_empire_strikes_back');
+    expect(screen.getByRole('link', { name: 'Wookiee' })).toHaveAttribute('href', '/description/species/wookiee');
+    expect(screen.getByRole('link', { name: 'X-wing' })).toHaveAttribute('href', '/description/starships/x-wing');
+    expect(screen.getByRole('link', { name: 'Sand Crawler' })).toHaveAttribute('href', '/description/vehicles/sand_crawler');
+    ['Homeworld', 'Films', 'Species', 'Starships', 'Vehicles'].forEach(label => {
+      expect(screen.getByRole('heading', { level: 3, name: label })).toBeInTheDocument();
+    });
+    // Everything linked arrived with the first pages, so nothing else was requested
+    expect(fetchedUrls(fetchSpy).sort()).toEqual([...firstPages].sort());
+  });
+
+  it('follows related links back and forth, with the URL moving each time', async () => {
+    mockFetch();
+    renderApp('/description/characters/luke_skywalker');
+    await screen.findByRole('heading', { level: 1, name: 'Luke Skywalker' });
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Tatooine' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tatooine' })).toBeInTheDocument();
+    expect(screen.getByText(/Tatooine has a rotation period of 23/)).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/planets/tatooine');
+    expect(screen.getByAltText('planets description')).toBeInTheDocument();
+
+    // A planet lists its residents
+    await userEvent.click(await screen.findByRole('link', { name: 'Leia Organa' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Leia Organa' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/characters/leia_organa');
+    expect(screen.getByRole('link', { name: 'Planet 1' })).toHaveAttribute('href', '/description/planets/planet_1');
+  });
+
+  it('fetches a linked item that is not loaded, holding its place until it arrives', async () => {
+    let release;
+    const extra = `${API_ENDPOINTS.characters}11/`;
+    const fetchSpy = mockFetch();
+    const passThrough = fetchSpy.getMockImplementation();
+    fetchSpy.mockImplementation((url) => (
+      url === extra ? new Promise(resolve => { release = () => resolve(passThrough(url)); }) : passThrough(url)
+    ));
+    renderApp('/description/films/a_new_hope');
+    await screen.findByRole('heading', { level: 1, name: 'A New Hope' });
+
+    // The cast that was already loaded shows at once; the one on page 2 is on its way
+    expect(await screen.findByText('Loading…')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Luke Skywalker' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Leia Organa' })).toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('link', { name: 'Extra Person 1' })).toHaveAttribute('href', '/description/characters/extra_person_1');
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+    expect(fetchedUrls(fetchSpy)).toContain(extra);
+    expect(fetchedUrls(fetchSpy)).not.toContain(page('characters', 2));
+
+    // Opening it uses the item just fetched rather than searching for it
+    await userEvent.click(screen.getByRole('link', { name: 'Extra Person 1' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Extra Person 1' })).toBeInTheDocument();
+    expect(fetchedUrls(fetchSpy).some(url => url.includes('?search='))).toBe(false);
+  });
+
+  it('marks a link that cannot be fetched instead of hiding or breaking the page', async () => {
+    mockFetch({ [`${API_ENDPOINTS.characters}11/`]: new Error('Down') });
+    renderApp('/description/films/a_new_hope');
+    await screen.findByRole('heading', { level: 1, name: 'A New Hope' });
+    expect(await screen.findByText('Unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Luke Skywalker' })).toBeInTheDocument();
+  });
+
+  it('shows no related section for an item that links to nothing', async () => {
+    mockFetch();
+    renderApp('/description/planets/extra_planet_2');
+    await screen.findByRole('heading', { level: 1, name: 'Extra Planet 2' });
+    expect(screen.queryByRole('heading', { level: 2, name: 'Related' })).not.toBeInTheDocument();
+  });
+});
+
+describe('detail page navigation', () => {
+  it('keeps the URL and the item in step through next and previous', async () => {
+    mockFetch();
+    renderApp('/description/starships/x-wing');
+    await screen.findByRole('heading', { level: 1, name: 'X-wing' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'next icon' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Starship 1' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/starships/starship_1');
+    expect(screen.getByText(/Starship 1 is of the T-65 model/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'next icon' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Starship 2' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/starships/starship_2');
+
+    await userEvent.click(screen.getByRole('button', { name: 'previous icon' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Starship 1' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/starships/starship_1');
+  });
+
+  it('wraps around at either end of the recently viewed list', async () => {
+    mockFetch();
+    renderApp('/description/starships/x-wing');
+    await screen.findByRole('heading', { level: 1, name: 'X-wing' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'previous icon' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Starship 8' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/starships/starship_8');
+
+    await userEvent.click(screen.getByRole('button', { name: 'next icon' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'X-wing' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/description/starships/x-wing');
+  });
+
+  it('opens a recently viewed item from the detail page', async () => {
+    mockFetch();
+    renderApp('/description/starships/x-wing');
+    await screen.findByRole('heading', { level: 1, name: 'X-wing' });
+
+    const card = screen.getAllByRole('link').find(l => l.getAttribute('href') === '/description/starships/starship_2');
+    await userEvent.click(card);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Starship 2' })).toBeInTheDocument();
+    expect(screen.getByText(/Starship 2 is of the T-65 model/)).toBeInTheDocument();
+    expect(screen.getByAltText('starships description')).toBeInTheDocument();
+  });
+
+  it('lists an item in recently viewed once however often it is shown', async () => {
+    mockFetch();
+    renderApp('/description/starships/x-wing');
+    await screen.findByRole('heading', { level: 1, name: 'X-wing' });
+    await userEvent.click(screen.getByRole('button', { name: 'next icon' }));
+    await screen.findByRole('heading', { level: 1, name: 'Starship 1' });
+    await userEvent.click(screen.getByRole('button', { name: 'previous icon' }));
+    await screen.findByRole('heading', { level: 1, name: 'X-wing' });
+    const names = [...document.querySelectorAll('.recently-viewed .list-item h4')].map(h => h.textContent);
+    expect(names.filter(name => name === 'X-wing')).toHaveLength(1);
   });
 });

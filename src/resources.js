@@ -10,6 +10,8 @@
 //                  results, recently viewed)
 //   cardText       the one-line summary shown on a card
 //   describe       the paragraph shown on the detail page
+//   related        the fields holding links to other items, with a heading for
+//                  each; the linked resource is read from the link itself
 
 const firstWord = (name) => name.split(' ')[0];
 const trimmed = (text) => (text || '').replace(/\s+/g, ' ').trim();
@@ -23,6 +25,11 @@ export const RESOURCES = {
     path: 'people/',
     label: 'Characters',
     imagePosition: { page: 'left', card: 'left' },
+    related: [
+      { field: 'homeworld', label: 'Homeworld' }, { field: 'films', label: 'Films' },
+      { field: 'species', label: 'Species' }, { field: 'starships', label: 'Starships' },
+      { field: 'vehicles', label: 'Vehicles' },
+    ],
     cardText: (character) => (
       `${firstWord(character.name)} was born in the year ${character.birth_year}, and is ${character.gender}`
     ),
@@ -38,6 +45,7 @@ export const RESOURCES = {
     path: 'planets/',
     label: 'Planets',
     imagePosition: { page: 'left', card: 'top' },
+    related: [{ field: 'residents', label: 'Residents' }, { field: 'films', label: 'Films' }],
     cardText: (planet) => (
       `${planet.name} has a climate of ${planet.climate}, and a population of ${planet.population}`
     ),
@@ -52,6 +60,7 @@ export const RESOURCES = {
     path: 'starships/',
     label: 'Starships',
     imagePosition: { page: 'top', card: 'top' },
+    related: [{ field: 'pilots', label: 'Pilots' }, { field: 'films', label: 'Films' }],
     cardText: (starship) => (
       `${firstWord(starship.name)} is of the ${starship.model} model, and has a cargo of ${starship.cargo_capacity}`
     ),
@@ -67,6 +76,11 @@ export const RESOURCES = {
     // SWAPI calls a film's name its title; everything downstream uses `name`
     nameField: 'title',
     imagePosition: { page: 'top', card: 'top' },
+    related: [
+      { field: 'characters', label: 'Characters' }, { field: 'planets', label: 'Planets' },
+      { field: 'starships', label: 'Starships' }, { field: 'vehicles', label: 'Vehicles' },
+      { field: 'species', label: 'Species' },
+    ],
     cardText: (film) => (
       `Episode ${film.episode_id}, directed by ${film.director} and released in ${film.release_date}`
     ),
@@ -82,6 +96,7 @@ export const RESOURCES = {
     path: 'species/',
     label: 'Species',
     imagePosition: { page: 'left', card: 'left' },
+    related: [{ field: 'homeworld', label: 'Homeworld' }, { field: 'people', label: 'People' }, { field: 'films', label: 'Films' }],
     cardText: (species) => (
       `${species.name} are ${article(species.classification)} ${species.classification} species that speak ${species.language}`
     ),
@@ -98,6 +113,7 @@ export const RESOURCES = {
     path: 'vehicles/',
     label: 'Vehicles',
     imagePosition: { page: 'top', card: 'top' },
+    related: [{ field: 'pilots', label: 'Pilots' }, { field: 'films', label: 'Films' }],
     cardText: (vehicle) => (
       `${vehicle.name} is ${article(vehicle.vehicle_class)} ${vehicle.vehicle_class} vehicle, and has a cargo of ${vehicle.cargo_capacity}`
     ),
@@ -136,6 +152,17 @@ export const HOME_SECTIONS = [
   { resource: 'species', display: 'slider', count: 9 },
   { resource: 'vehicles', display: 'cards', count: 6 },
 ];
+
+// The resource an API path such as "people/1/" belongs to
+export const resourceForPath = (path) => (
+  RESOURCE_KEYS.find(resource => typeof path === 'string' && path.startsWith(RESOURCES[resource].path))
+);
+
+// The API links in a related field: a single link, a list of them, or nothing
+// ("unknown", "n/a" and null all mean nothing)
+export const relatedUrls = (value) => (
+  (Array.isArray(value) ? value : [value]).filter(entry => typeof entry === 'string' && /^https?:\/\//.test(entry))
+);
 
 // Routes. Items are addressed by name: "Luke Skywalker" becomes luke_skywalker.
 export const listPath = (resource) => `/${resource}`;

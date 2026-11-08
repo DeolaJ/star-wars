@@ -1,6 +1,6 @@
 import { API_BASE_URL, API_PATHS } from '../config';
-import { RESOURCE_KEYS, normaliseAll } from '../resources';
-import { fetchFromAPI, toApiPath } from './api';
+import { RESOURCE_KEYS, normalise, normaliseAll, resourceForPath } from '../resources';
+import { fetchFromAPI, toApiPath, apiPathOf } from './api';
 import { getCached, setCached } from './cache';
 import { stateKeys } from './selectors';
 
@@ -13,6 +13,9 @@ export const RESET_SEARCH_RESOURCE = "RESET_SEARCH_RESOURCE";
 export const RESET_SEARCH_ALL = "RESET_SEARCH_ALL";
 export const SET_RECENTLY_VIEWED = "SET_RECENTLY_VIEWED";
 export const SET_DESCRIPTION = "SET_DESCRIPTION";
+export const FETCH_ITEM_START = "FETCH_ITEM_START";
+export const FETCH_ITEM_SUCCESS = "FETCH_ITEM_SUCCESS";
+export const FETCH_ITEM_FAILURE = "FETCH_ITEM_FAILURE";
 
 const action = (type) => (payload) => ({ type, payload });
 
@@ -25,11 +28,24 @@ const resetSearchResource = action(RESET_SEARCH_RESOURCE);
 const resetAll = action(RESET_SEARCH_ALL);
 const recentlyViewed = action(SET_RECENTLY_VIEWED);
 const setDescription = action(SET_DESCRIPTION);
+const fetchItemStart = action(FETCH_ITEM_START);
+const fetchItemSuccess = action(FETCH_ITEM_SUCCESS);
+const fetchItemFailure = action(FETCH_ITEM_FAILURE);
 
 // A response is only used, and cached, if it has the shape SWAPI returns.
 // Anything else (an HTML error page, a truncated body) is treated as a failure.
 const assertResults = (body, needsCount) => {
   const complete = body && Array.isArray(body.results) && (!needsCount || typeof body.count === 'number');
+  if (!complete) {
+    throw new Error('Incomplete response from the API');
+  }
+  return body;
+};
+
+// A single item carries its own link and a name (or a title, for films)
+const assertItem = (body) => {
+  const complete = body && typeof body.url === 'string'
+    && (typeof body.name === 'string' || typeof body.title === 'string');
   if (!complete) {
     throw new Error('Incomplete response from the API');
   }
@@ -164,17 +180,62 @@ export const setRecentlyViewed = (type, item) => (dispatch) => (
   }))
 )
 
-// Items that are already in the store (loaded pages, search results, recently
-// viewed) are used directly. Anything else, such as a description URL for an item
-// on a page that has not been loaded, is looked up through the search API.
-const findLoadedItem = (app, category, name) => {
-  const keys = stateKeys(category);
-  const candidates = [
+// Everything the store holds for one resource: loaded pages, search results,
+// recently viewed and items fetched for related links
+const storedItems = (app, resource) => {
+  const keys = stateKeys(resource);
+  return [
     ...app[keys.items],
-    ...(app.recentlyViewed[category] || []),
+    ...(app.recentlyViewed[resource] || []),
     ...Object.values(app[keys.search]).flat(),
+    ...Object.entries(app.items.byPath)
+      .filter(([path]) => resourceForPath(path) === resource)
+      .map(([, item]) => item),
   ];
-  return candidates.find(item => item.name && item.name.toLowerCase() === name);
+};
+
+// Items that are already in the store are used directly. Anything else, such as
+// a description URL for an item on a page that has not been loaded, is looked up
+// through the search API.
+const findLoadedItem = (app, category, name) => (
+  storedItems(app, category).find(item => item.name && item.name.toLowerCase() === name)
+);
+
+// A single item by its API path, from the cache or the API, keyed like pages
+// by its swapi.dev URL whichever server answered
+const getItem = async (resource, path) => {
+  const cacheKey = `${API_BASE_URL}/${path}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+  const requestedAt = Date.now();
+  const item = normalise(resource, await fetchFromAPI(path, assertItem));
+  setCached(cacheKey, item, requestedAt);
+  return item;
+};
+
+// Resolves an API link, such as a character's homeworld, to the item it points
+// at so it can be shown by name and linked to. An item already in the store is
+// used as it is, and a link that is being fetched is not requested again.
+export const doFetchItem = (url) => (dispatch, getState) => {
+  const path = apiPathOf(url);
+  const resource = resourceForPath(path);
+  if (!resource) return Promise.resolve();
+  const app = getState().app;
+  if (app.items.byPath[path] || app.items.loading[path]) return Promise.resolve();
+
+  const loaded = storedItems(app, resource).find(item => apiPathOf(item.url) === path);
+  if (loaded) {
+    dispatch(fetchItemSuccess({ path, item: loaded }));
+    return Promise.resolve();
+  }
+  dispatch(fetchItemStart({ path }));
+  return getItem(resource, path)
+  .then(item => {
+    dispatch(fetchItemSuccess({ path, item }))
+  })
+  .catch(error => {
+    dispatch(fetchItemFailure({ path, error: { message: error.message } }))
+  })
 };
 
 export const doSetDescription = (category, name) => async (dispatch, getState) => {
@@ -203,4 +264,5 @@ export default {
   resetSearchAll,
   setRecentlyViewed,
   doSetDescription,
+  doFetchItem,
 }

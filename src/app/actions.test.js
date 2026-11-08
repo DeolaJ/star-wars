@@ -613,3 +613,101 @@ describe('fallback API', () => {
     expect(revisit.getState().app.characters).toHaveLength(10);
   });
 });
+
+describe('related items', () => {
+  const luke = `${API_ENDPOINTS.characters}1/`;
+  // Extra Person 1 is on the second page of people, which nothing loads by default
+  const extra = `${API_ENDPOINTS.characters}11/`;
+
+  it('uses an item already in the store without a request', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchPage('characters', 1));
+    fetchSpy.mockClear();
+
+    await store.dispatch(actions.doFetchItem(luke));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(store.getState().app.items.byPath['people/1/'].name).toBe('Luke Skywalker');
+  });
+
+  it('fetches an item that is not loaded and keeps it by path', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchItem(extra));
+
+    expect(fetchedUrls(fetchSpy)).toEqual([extra]);
+    expect(store.getState().app.items.byPath['people/11/'].name).toBe('Extra Person 1');
+    expect(store.getState().app.items.loading['people/11/']).toBeUndefined();
+  });
+
+  it('requests a link once however many times it is asked for', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+
+    await Promise.all([store.dispatch(actions.doFetchItem(extra)), store.dispatch(actions.doFetchItem(extra))]);
+    await store.dispatch(actions.doFetchItem(extra));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('names a fetched film from its title', async () => {
+    mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchItem(`${API_ENDPOINTS.films}1/`));
+    expect(store.getState().app.items.byPath['films/1/'].name).toBe('A New Hope');
+  });
+
+  it('serves a fetched item from the cache on the next visit', async () => {
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doFetchItem(extra));
+
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchItem(extra));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(revisit.getState().app.items.byPath['people/11/'].name).toBe('Extra Person 1');
+  });
+
+  it('fetches through the mirror, and accepts a link that points at it', async () => {
+    const fetchSpy = mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchItem(mirrorUrl(extra)));
+
+    expect(fetchedUrls(fetchSpy)).toEqual([extra, mirrorUrl(extra)]);
+    expect(store.getState().app.items.byPath['people/11/'].name).toBe('Extra Person 1');
+  });
+
+  it('records a link that cannot be fetched and caches nothing', async () => {
+    mockFetch({ [extra]: new Error('Down') });
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchItem(extra));
+
+    expect(store.getState().app.items.errors['people/11/'].message).toBe('Down');
+    expect(store.getState().app.items.byPath['people/11/']).toBeUndefined();
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('ignores a link that is not to the API', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchItem('https://example.com/people/1/'));
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(store.getState().app.items.byPath).toEqual({});
+  });
+
+  it('lets a description use an item fetched for a link instead of searching for it', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchItem(extra));
+    fetchSpy.mockClear();
+
+    await store.dispatch(actions.doSetDescription('characters', 'extra person 1'));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(store.getState().app.descriptionItem.category.name).toBe('Extra Person 1');
+  });
+});

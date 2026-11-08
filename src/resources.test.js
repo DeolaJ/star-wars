@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath } from './resources';
+import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath, resourceForPath, relatedUrls } from './resources';
 import { API_BASE_URL, API_PATHS, API_ENDPOINTS } from './config';
 
 describe('resource configuration', () => {
@@ -90,5 +90,32 @@ describe('resource configuration', () => {
     expect(listPath('planets')).toBe('/planets');
     expect(descriptionPath('characters', 'Luke Skywalker')).toBe('/description/characters/luke_skywalker');
     expect(descriptionPath('starships', 'X-wing')).toBe('/description/starships/x-wing');
+  });
+});
+
+describe('related links', () => {
+  it.each(RESOURCE_KEYS)('%s names the fields that link to other items', (key) => {
+    expect(RESOURCES[key].related.length).toBeGreaterThan(0);
+    RESOURCES[key].related.forEach(({ field, label }) => {
+      expect(field).toMatch(/^[a-z]+$/);
+      expect(label).toBeTruthy();
+    });
+  });
+
+  it('tells the resource from an API path', () => {
+    expect(resourceForPath('people/1/')).toBe('characters');
+    expect(resourceForPath('films/3/')).toBe('films');
+    expect(resourceForPath('species/2/')).toBe('species');
+    expect(resourceForPath('droids/1/')).toBeUndefined();
+    expect(resourceForPath(null)).toBeUndefined();
+  });
+
+  it('reads the links out of a related field, whatever its shape', () => {
+    expect(relatedUrls('https://swapi.dev/api/planets/1/')).toEqual(['https://swapi.dev/api/planets/1/']);
+    expect(relatedUrls(['https://swapi.dev/api/films/1/', 'https://swapi.py4e.com/api/films/2/'])).toHaveLength(2);
+    expect(relatedUrls(null)).toEqual([]);
+    expect(relatedUrls('unknown')).toEqual([]);
+    expect(relatedUrls('n/a')).toEqual([]);
+    expect(relatedUrls([])).toEqual([]);
   });
 });

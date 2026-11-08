@@ -10,6 +10,9 @@ import {
   RESET_SEARCH_ALL,
   SET_RECENTLY_VIEWED,
   SET_DESCRIPTION,
+  FETCH_ITEM_START,
+  FETCH_ITEM_SUCCESS,
+  FETCH_ITEM_FAILURE,
 } from "./actions"
 
 // Per-resource paging: total count from the API, results by page number,
@@ -54,6 +57,13 @@ export const defaultState = {
   isFilteringAll: false,
   recentlyViewed: {},
   descriptionItem: {},
+  // Items fetched by their API link for the related links on a detail page,
+  // keyed by path ("people/1/"), with the links being fetched and those that failed
+  items: {
+    byPath: {},
+    loading: {},
+    errors: {},
+  },
 }
 
 // The results of one query for one resource. A repeated query is served from
@@ -170,13 +180,16 @@ export default function appReducers (state=defaultState, action) {
       }
     }
 
+    // An item is listed once however many times it is viewed
     case SET_RECENTLY_VIEWED: {
       const { type: category, item } = payload;
+      const viewed = state.recentlyViewed[category] || [];
+      if (viewed.some(entry => entry.name === item.name)) return state;
       return {
         ...state,
         recentlyViewed: {
           ...state.recentlyViewed,
-          [category]: [...(state.recentlyViewed[category] || []), item],
+          [category]: [...viewed, item],
         },
       }
     }
@@ -188,8 +201,48 @@ export default function appReducers (state=defaultState, action) {
       return {
         ...state,
         descriptionItem: {
+          resource: category,
           category: item,
           description: resource.describe(item),
+        },
+      }
+    }
+
+    case FETCH_ITEM_START: {
+      const { path } = payload;
+      const { items } = state;
+      return {
+        ...state,
+        items: {
+          ...items,
+          loading: { ...items.loading, [path]: true },
+          errors: omit(items.errors, path),
+        },
+      }
+    }
+
+    case FETCH_ITEM_SUCCESS: {
+      const { path, item } = payload;
+      const { items } = state;
+      return {
+        ...state,
+        items: {
+          ...items,
+          byPath: { ...items.byPath, [path]: item },
+          loading: omit(items.loading, path),
+        },
+      }
+    }
+
+    case FETCH_ITEM_FAILURE: {
+      const { path, error } = payload;
+      const { items } = state;
+      return {
+        ...state,
+        items: {
+          ...items,
+          loading: omit(items.loading, path),
+          errors: { ...items.errors, [path]: error },
         },
       }
     }

@@ -8,6 +8,7 @@ import Description from './components/description';
 import Loader from './components/partials/loader';
 import { RESOURCE_KEYS, listPath } from './resources';
 import { resourcesShape } from './components/resource-props';
+import { itemsShape } from './components/partials/related-items';
 
 class App extends PureComponent {
 
@@ -19,9 +20,9 @@ class App extends PureComponent {
 
   render () {
     const {
-      resources, isFilteringAll, recentlyViewed, descriptionItem,
+      resources, isFilteringAll, recentlyViewed, descriptionItem, items,
       doFetchPage, doSearch, resetSearch, doSearchAll, resetSearchAll,
-      setRecentlyViewed, doSetDescription,
+      setRecentlyViewed, doSetDescription, doFetchItem,
     } = this.props;
 
     if (RESOURCE_KEYS.some(resource => resources[resource].loading)) {
@@ -68,7 +69,9 @@ class App extends PureComponent {
               setRecentlyViewed={setRecentlyViewed}
               recentlyViewed={recentlyViewed}
               descriptionItem={descriptionItem}
+              items={items}
               doSetDescription={doSetDescription}
+              doFetchItem={doFetchItem}
             />
           }
         />
@@ -82,6 +85,7 @@ App.propTypes = {
   isFilteringAll: PropTypes.bool.isRequired,
   recentlyViewed: PropTypes.object.isRequired,
   descriptionItem: PropTypes.object.isRequired,
+  items: itemsShape.isRequired,
   doFetchPage: PropTypes.func.isRequired,
   doSearch: PropTypes.func.isRequired,
   resetSearch: PropTypes.func.isRequired,
@@ -89,6 +93,7 @@ App.propTypes = {
   resetSearchAll: PropTypes.func.isRequired,
   setRecentlyViewed: PropTypes.func.isRequired,
   doSetDescription: PropTypes.func.isRequired,
+  doFetchItem: PropTypes.func.isRequired,
 };
 
 export default App;

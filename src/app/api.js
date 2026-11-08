@@ -25,6 +25,11 @@ export const toApiPath = (url) => {
   return url.slice(base.length + 1);
 };
 
+// The path of an API link, or null for a link to anywhere else
+export const apiPathOf = (url) => (
+  typeof url === 'string' && API_BASE_URLS.some(base => url.startsWith(`${base}/`)) ? toApiPath(url) : null
+);
+
 const getJSON = async (url) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);

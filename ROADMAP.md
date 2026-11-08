@@ -20,7 +20,7 @@ A rough plan for the work ahead. Estimates are approximate.
 ## Features (about 6 hours)
 
 - [x] Add films, species and vehicles
-- [ ] Link related items on the detail page (a character's homeworld and starships, a planet's residents)
+- [x] Link related items on the detail page (a character's homeworld and starships, a planet's residents)
 - [ ] Filters and sorting (for example by planet climate or starship class)
 - [ ] Shareable URLs that keep the search query and page
 
