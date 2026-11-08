@@ -10,6 +10,21 @@ const planet = (name) => ({
   climate: 'arid', gravity: '1 standard', terrain: 'desert',
   population: '200000', surface_water: '1',
 });
+// SWAPI titles a film rather than naming it; the app normalises that on ingest
+const film = (title, episode = 4) => ({
+  title, episode_id: episode, director: 'George Lucas', producer: 'Gary Kurtz',
+  release_date: '1977-05-25', opening_crawl: `It is a period of civil war. ${title} begins.`,
+});
+const creature = (name) => ({
+  name, classification: 'mammal', designation: 'sentient', average_height: '180',
+  skin_colors: 'caucasian', hair_colors: 'blonde', eye_colors: 'blue',
+  average_lifespan: '120', language: 'Galactic Basic',
+});
+const vehicle = (name) => ({
+  name, model: 'Digger Crawler', manufacturer: 'Corellia Mining', cost_in_credits: '150000',
+  length: '36.8', max_atmosphering_speed: '30', crew: '46', passengers: '30',
+  cargo_capacity: '50000', consumables: '2 months', vehicle_class: 'wheeled',
+});
 const starship = (name) => ({
   name, model: 'T-65', manufacturer: 'Incom', cost_in_credits: '149999',
   length: '12.5', max_atmosphering_speed: '1050', crew: '1',
@@ -28,10 +43,22 @@ const resource = (endpoint, page1, page2) => {
   };
 };
 
+// A resource that fits on one page, as films do on the real API
+const onePage = (endpoint, items) => ({
+  [`${endpoint}?page=1`]: { count: items.length, next: null, previous: null, results: items },
+});
+
 export const pages = {
   ...resource(API_ENDPOINTS.characters, [person('Luke Skywalker'), person('Leia Organa', 'female'), ...range(8, person, 'Person')], range(5, person, 'Extra Person')),
   ...resource(API_ENDPOINTS.planets, [planet('Tatooine'), ...range(9, planet, 'Planet')], range(3, planet, 'Extra Planet')),
   ...resource(API_ENDPOINTS.starships, [starship('X-wing'), ...range(9, starship, 'Starship')], range(2, starship, 'Extra Starship')),
+  // One page only, and every episode so the era-based artwork rules are exercised
+  ...onePage(API_ENDPOINTS.films, [
+    film('A New Hope', 4), film('The Empire Strikes Back', 5), film('Return of the Jedi', 6),
+    film('The Phantom Menace', 1), film('Attack of the Clones', 2), film('Revenge of the Sith', 3),
+  ]),
+  ...resource(API_ENDPOINTS.species, [creature('Wookiee'), ...range(9, creature, 'Species')], range(4, creature, 'Extra Species')),
+  ...resource(API_ENDPOINTS.vehicles, [vehicle('Sand Crawler'), ...range(9, vehicle, 'Vehicle')], range(3, vehicle, 'Extra Vehicle')),
 };
 
 const allItems = (endpoint) => Object.entries(pages)
@@ -39,10 +66,11 @@ const allItems = (endpoint) => Object.entries(pages)
   .flatMap(([, body]) => body.results);
 
 // Answers ?search= the way SWAPI does: a case-insensitive name match across every page
+const label = (item) => item.name || item.title;
 const searchResponse = (url) => {
   const [endpoint, query] = url.split('?search=');
   const term = decodeURIComponent(query).toLowerCase();
-  const results = allItems(endpoint).filter(item => item.name.toLowerCase().includes(term));
+  const results = allItems(endpoint).filter(item => label(item).toLowerCase().includes(term));
   return { count: results.length, next: null, previous: null, results };
 };
 

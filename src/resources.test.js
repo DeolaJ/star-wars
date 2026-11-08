@@ -1,10 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { RESOURCES, RESOURCE_KEYS, descriptionPath, listPath } from './resources';
+import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath } from './resources';
 import { API_BASE_URL, API_PATHS, API_ENDPOINTS } from './config';
 
 describe('resource configuration', () => {
   it('lists the resources the app shows', () => {
-    expect(RESOURCE_KEYS).toEqual(['characters', 'planets', 'starships']);
+    expect(RESOURCE_KEYS).toEqual(['characters', 'planets', 'starships', 'films', 'species', 'vehicles']);
+  });
+
+  it('gives every resource a home page section, and only real ones', () => {
+    expect(HOME_SECTIONS.map(s => s.resource).sort()).toEqual([...RESOURCE_KEYS].sort());
+    HOME_SECTIONS.forEach(section => {
+      expect(['cards', 'slider']).toContain(section.display);
+      expect(section.count).toBeGreaterThan(0);
+    });
   });
 
   it.each(RESOURCE_KEYS)('describes %s completely', (key) => {
@@ -18,7 +26,10 @@ describe('resource configuration', () => {
   });
 
   it('drives the API paths and endpoints', () => {
-    expect(API_PATHS).toEqual({ characters: 'people/', planets: 'planets/', starships: 'starships/' });
+    expect(API_PATHS).toEqual({
+      characters: 'people/', planets: 'planets/', starships: 'starships/',
+      films: 'films/', species: 'species/', vehicles: 'vehicles/',
+    });
     expect(API_ENDPOINTS.characters).toBe(`${API_BASE_URL}/people/`);
     expect(Object.keys(API_ENDPOINTS)).toEqual(RESOURCE_KEYS);
   });
@@ -30,6 +41,42 @@ describe('resource configuration', () => {
       .toBe('Tatooine has a climate of arid, and a population of 200000');
     expect(RESOURCES.starships.cardText({ name: 'Millennium Falcon', model: 'YT-1300', cargo_capacity: '100000' }))
       .toBe('Millennium is of the YT-1300 model, and has a cargo of 100000');
+  });
+
+  describe('naming', () => {
+    it('gives a film a name from its title, keeping the title', () => {
+      const film = normalise('films', { title: 'A New Hope', episode_id: 4 });
+      expect(film.name).toBe('A New Hope');
+      expect(film.title).toBe('A New Hope');
+    });
+
+    it.each(['characters', 'planets', 'starships', 'species', 'vehicles'])('leaves a %s item untouched', (resource) => {
+      const item = { name: 'Tatooine', climate: 'arid' };
+      expect(normalise(resource, item)).toBe(item);
+    });
+
+    it('leaves a film alone when the API sends no title', () => {
+      const broken = { episode_id: 4 };
+      expect(normalise('films', broken)).toBe(broken);
+    });
+
+    it('names a whole page of films', () => {
+      expect(normaliseAll('films', [{ title: 'A' }, { title: 'B' }]).map(f => f.name)).toEqual(['A', 'B']);
+    });
+
+    it('routes a film by its title', () => {
+      expect(descriptionPath('films', normalise('films', { title: 'The Empire Strikes Back' }).name))
+        .toBe('/description/films/the_empire_strikes_back');
+    });
+  });
+
+  it('writes the card text for the new resources', () => {
+    expect(RESOURCES.films.cardText({ episode_id: 4, director: 'George Lucas', release_date: '1977-05-25' }))
+      .toBe('Episode 4, directed by George Lucas and released in 1977-05-25');
+    expect(RESOURCES.species.cardText({ name: 'Wookiee', classification: 'mammal', language: 'Shyriiwook' }))
+      .toBe('Wookiee are a mammal species that speak Shyriiwook');
+    expect(RESOURCES.vehicles.cardText({ name: 'Sand Crawler', vehicle_class: 'wheeled', cargo_capacity: '50000' }))
+      .toBe('Sand Crawler is a wheeled vehicle, and has a cargo of 50000');
   });
 
   it('builds routes from the resource and the item name', () => {

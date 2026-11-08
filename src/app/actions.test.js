@@ -355,11 +355,12 @@ describe('caching between visits', () => {
     at(T0);
     const fetchSpy = mockFetch();
     await makeStore().dispatch(actions.doSearchAll('wing'));
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    // One request per resource
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
 
     const revisit = makeStore();
     await revisit.dispatch(actions.doSearch('starships', 'wing'));
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
     expect(revisit.getState().app.allFilteredStarships.map(s => s.name)).toEqual(['X-wing']);
   });
 

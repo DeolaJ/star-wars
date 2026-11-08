@@ -6,6 +6,9 @@ describe('artwork', () => {
     ['characters', 4, /character-[1-4]-600\.webp/, 600, 600],
     ['planets', 3, /planet-[1-3]-600\.webp/, 600, 600],
     ['starships', 6, /starship-[1-6]-720\.webp/, 720, 405],
+    ['films', 3, /film-[1-3]-720\.webp/, 720, 405],
+    ['species', 4, /species-[1-4]-600\.webp/, 600, 600],
+    ['vehicles', 4, /vehicle-[1-4]-720\.webp/, 720, 405],
   ])('gives %s a WebP picture with every size in its srcset', (category, count, smallest, width, height) => {
     const image = artworkFor(category, 'Luke Skywalker');
     expect(image.src).toMatch(smallest);
@@ -26,7 +29,7 @@ describe('artwork', () => {
   });
 
   it('returns nothing for an unknown category', () => {
-    expect(artworkFor('films', 'A New Hope')).toBeNull();
+    expect(artworkFor('weapons', 'Lightsaber')).toBeNull();
   });
 
   it('offers the hero in three widths and a full-screen background', () => {
@@ -72,6 +75,32 @@ describe('artwork', () => {
       ['TIE Advanced x1', 'Starfighter', [2, 4]],
     ])('gives the %s a matching ship', (name, starshipClass, expected) => {
       expect(expected).toContain(number(artworkFor('starships', { name, starship_class: starshipClass, model: '' })));
+    });
+
+    it.each([
+      ['The Phantom Menace', 1, 1], ['Attack of the Clones', 2, 1], ['Revenge of the Sith', 3, 1],
+      ['A New Hope', 4, 2], ['The Empire Strikes Back', 5, 2], ['Return of the Jedi', 6, 2],
+      ['The Force Awakens', 7, 3],
+    ])('gives %s the artwork for its era', (name, episode, expected) => {
+      expect(number(artworkFor('films', { name, episode_id: episode }))).toBe(expected);
+    });
+
+    it.each([
+      ['Wookiee', 'mammal', 'sentient', 1],
+      ['Trandoshan', 'reptile', 'sentient', 2],
+      ['Geonosian', 'insectoid', 'sentient', 3],
+      ['Droid', 'artificial', 'sentient', 4],
+    ])('gives the %s species a matching body plan', (name, classification, designation, expected) => {
+      expect(number(artworkFor('species', { name, classification, designation }))).toBe(expected);
+    });
+
+    it.each([
+      ['AT-AT', 'assault walker', 1],
+      ['Snowspeeder', 'airspeeder', 2],
+      ['Sand Crawler', 'wheeled', 3],
+      ['TIE bomber', 'space/planetary bomber', 4],
+    ])('gives the %s a matching vehicle', (name, vehicleClass, expected) => {
+      expect(number(artworkFor('vehicles', { name, vehicle_class: vehicleClass, model: '' }))).toBe(expected);
     });
 
     it('falls back to a stable pick when the API has nothing to go on', () => {

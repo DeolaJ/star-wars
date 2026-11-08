@@ -1,5 +1,5 @@
 import { API_BASE_URL, API_PATHS } from '../config';
-import { RESOURCE_KEYS } from '../resources';
+import { RESOURCE_KEYS, normaliseAll } from '../resources';
 import { fetchFromAPI, toApiPath } from './api';
 import { getCached, setCached } from './cache';
 import { stateKeys } from './selectors';
@@ -39,13 +39,13 @@ const assertResults = (body, needsCount) => {
 // Pages come from the cache when a fresh copy exists, otherwise from the API
 // (swapi.dev, or the mirror if it fails). Only complete responses are saved,
 // keyed by the swapi.dev URL whichever server answered.
-const getPage = async (path) => {
+const getPage = async (resource, path) => {
   const cacheKey = `${API_BASE_URL}/${path}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
   const requestedAt = Date.now();
   const body = await fetchFromAPI(path, response => assertResults(response, true));
-  const page = { count: body.count, results: body.results };
+  const page = { count: body.count, results: normaliseAll(resource, body.results) };
   setCached(cacheKey, page, requestedAt);
   return page;
 };
@@ -62,7 +62,7 @@ export const doFetchPage = (resource, page) => (dispatch, getState) => {
   }
   dispatch(fetchPageStart({ resource, page }));
 
-  return getPage(`${API_PATHS[resource]}?page=${page}`)
+  return getPage(resource, `${API_PATHS[resource]}?page=${page}`)
   .then(response => {
     dispatch(fetchPageSuccess({
       resource,
@@ -96,7 +96,7 @@ const fetchSearchResults = async (resource, param) => {
   let path = `${API_PATHS[resource]}?search=${encodeURIComponent(param)}`;
   while (path) {
     const response = await fetchFromAPI(path, body => assertResults(body, false));
-    results = [...results, ...response.results];
+    results = [...results, ...normaliseAll(resource, response.results)];
     // The next link points at whichever server answered; follow it as a path
     // so a later page can still fall back
     path = response.next ? toApiPath(response.next) : null;

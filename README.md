@@ -1,6 +1,6 @@
 # Star Wars Explorer
 
-A fast, searchable guide to the Star Wars universe. Browse characters, planets and starships, open any of them for details, and pick up where you left off with a recently viewed list. Data comes from the public [SWAPI](https://swapi.dev) API.
+A fast, searchable guide to the Star Wars universe. Browse characters, planets, starships, films, species and vehicles, open any of them for details, and pick up where you left off with a recently viewed list. Data comes from the public [SWAPI](https://swapi.dev) API.
 
 Live demo: https://starwars-deolaj.netlify.app
 
@@ -12,8 +12,8 @@ Star Wars fans who want a quick, good-looking way to look things up, and develop
 
 ## Features
 
-- Home page with featured characters, planets and starships
-- Separate list pages for characters, planets and starships, with pagination
+- Home page with featured items from every category
+- Separate list pages for characters, planets, starships, films, species and vehicles, with pagination
 - Search within each category or across everything at once
 - Detail page for every item
 - Recently viewed items, kept between visits

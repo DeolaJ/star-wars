@@ -5,13 +5,24 @@ import { Link } from 'react-router-dom';
 import Section from './partials/section';
 import Slider from './partials/slider';
 import ListItem from './partials/list-item';
-import { RESOURCES, listPath } from '../resources';
+import { RESOURCES, HOME_SECTIONS, listPath } from '../resources';
 import { resourceDataShape, resourcesShape } from './resource-props';
+
+const cards = (resource, items) => items.map(item => (
+  <ListItem
+    key={item.name}
+    item={item}
+    type={resource}
+    imagePosition={RESOURCES[resource].imagePosition.card}
+    view="grid"
+  />
+));
 
 // A "Popular ..." section: a taste of one resource with a link to all of it,
 // or the error that stopped it loading
-const Popular = ({ resource, data, children }) => {
+const Popular = ({ resource, display, count, data }) => {
   const { label } = RESOURCES[resource];
+  const items = data.items.slice(0, count);
   return (
     <Section
       title={`Popular ${label}`}
@@ -25,7 +36,11 @@ const Popular = ({ resource, data, children }) => {
         )
         : (
           <>
-            {children}
+            {
+              display === 'slider'
+                ? <Slider items={items} resultsPerView={3} type={resource} />
+                : cards(resource, items)
+            }
             <div className="section__button">
               <Link to={listPath(resource)}>
                 <button
@@ -44,38 +59,25 @@ const Popular = ({ resource, data, children }) => {
 
 Popular.propTypes = {
   resource: PropTypes.oneOf(Object.keys(RESOURCES)).isRequired,
+  display: PropTypes.oneOf(['cards', 'slider']).isRequired,
+  count: PropTypes.number.isRequired,
   data: resourceDataShape.isRequired,
-  children: PropTypes.node.isRequired,
 };
-
-const cards = (resource, items) => items.map(item => (
-  <ListItem
-    key={item.name}
-    item={item}
-    type={resource}
-    imagePosition={RESOURCES[resource].imagePosition.card}
-    view="grid"
-  />
-));
 
 const MainHome = ({ resources }) => {
   return (
     <div className="home">
-      <Popular resource="starships" data={resources.starships}>
-        {cards('starships', resources.starships.items.slice(0, 6))}
-      </Popular>
-
-      <Popular resource="planets" data={resources.planets}>
-        <Slider
-          items={resources.planets.items.slice(0, 9)}
-          resultsPerView={3}
-          type="planets"
-        />
-      </Popular>
-
-      <Popular resource="characters" data={resources.characters}>
-        {cards('characters', resources.characters.items.slice(0, 4))}
-      </Popular>
+      {
+        HOME_SECTIONS.map(({ resource, display, count }) => (
+          <Popular
+            key={resource}
+            resource={resource}
+            display={display}
+            count={count}
+            data={resources[resource]}
+          />
+        ))
+      }
     </div>
   );
 };

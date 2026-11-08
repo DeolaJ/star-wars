@@ -23,7 +23,7 @@ const renderApp = (route = '/') => {
 };
 
 const page = (resource, n) => `${API_ENDPOINTS[resource]}?page=${n}`;
-const firstPages = [page('characters', 1), page('planets', 1), page('starships', 1)];
+const firstPages = ['characters', 'planets', 'starships', 'films', 'species', 'vehicles'].map(r => page(r, 1));
 
 describe('App', () => {
   it('fetches only the first page of each resource on load and renders the home route', async () => {
@@ -334,5 +334,84 @@ describe('resource pages', () => {
     mockFetch({ [page('starships', 1)]: new Error('Network down') });
     renderApp('/starships');
     expect(await screen.findByText('There was an error while loading Star Wars Starships: Network down')).toBeInTheDocument();
+  });
+});
+
+describe('films, species and vehicles', () => {
+  it.each([
+    ['/films', 'Starwars Films', 'A New Hope'],
+    ['/species', 'Starwars Species', 'Wookiee'],
+    ['/vehicles', 'Starwars Vehicles', 'Sand Crawler'],
+  ])('renders the %s list page', async (route, title, firstItem) => {
+    mockFetch();
+    renderApp(route);
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(screen.getByText(firstItem)).toBeInTheDocument();
+  });
+
+  it('shows a film by its title, on a card and in its link', async () => {
+    mockFetch();
+    renderApp('/films');
+    await screen.findByText('Starwars Films');
+    expect(screen.getByText('A New Hope')).toBeInTheDocument();
+    expect(screen.getByText(/Episode 4, directed by George Lucas/)).toBeInTheDocument();
+    const link = screen.getAllByRole('link', { name: 'Read more' })
+      .find(l => l.getAttribute('href') === '/description/films/a_new_hope');
+    expect(link).toBeDefined();
+  });
+
+  it('gives films a single page, since they all fit on one', async () => {
+    mockFetch();
+    renderApp('/films');
+    await screen.findByText('Starwars Films');
+    expect(screen.getAllByRole('button', { name: /^\d+$/ }).map(b => b.textContent)).toEqual(['1']);
+  });
+
+  it('opens a film detail page straight from its URL', async () => {
+    mockFetch();
+    renderApp('/description/films/the_empire_strikes_back');
+    expect(await screen.findByRole('heading', { level: 1, name: 'The Empire Strikes Back' })).toBeInTheDocument();
+    expect(document.querySelector('.description__content'))
+      .toHaveTextContent(/is episode 5 of the saga, directed by George Lucas/);
+  });
+
+  it('searches films by title from the films page', async () => {
+    mockFetch();
+    const store = renderApp('/films');
+    await screen.findByText('Starwars Films');
+
+    await userEvent.type(screen.getAllByPlaceholderText('Enter a search item')[1], 'jedi');
+    expect(await screen.findByText('FILMS Results', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.getByText('Return of the Jedi')).toBeInTheDocument();
+    expect(store.getState().app.allFilteredFilms.map(f => f.name)).toEqual(['Return of the Jedi']);
+  }, 10000);
+
+  it('includes every resource in a site-wide search', async () => {
+    mockFetch();
+    const store = renderApp('/');
+    await screen.findByText('Popular Characters');
+
+    await userEvent.type(screen.getByPlaceholderText('Enter a search item'), 'crawler');
+    await waitFor(() => expect(store.getState().app.isFilteringAll).toBe(true), { timeout: 4000 });
+    expect(store.getState().app.allFilteredVehicles.map(v => v.name)).toEqual(['Sand Crawler']);
+    expect(await screen.findByText('Vehicles')).toBeInTheDocument();
+  }, 10000);
+
+  it('shows a Popular section for every resource on the home page', async () => {
+    mockFetch();
+    renderApp('/');
+    await screen.findByText('Popular Characters');
+    ['Characters', 'Planets', 'Starships', 'Films', 'Species', 'Vehicles'].forEach(label => {
+      expect(screen.getByText(`Popular ${label}`)).toBeInTheDocument();
+    });
+  });
+
+  it('paginates species like any other resource', async () => {
+    mockFetch();
+    renderApp('/species');
+    await screen.findByText('Starwars Species');
+    expect(screen.getByText('Wookiee')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(await screen.findByText('Extra Species 1')).toBeInTheDocument();
   });
 });

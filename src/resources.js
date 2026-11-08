@@ -12,6 +12,7 @@
 //   describe       the paragraph shown on the detail page
 
 const firstWord = (name) => name.split(' ')[0];
+const trimmed = (text) => (text || '').replace(/\s+/g, ' ').trim();
 const pronoun = (gender) => (gender === 'male' ? 'He' : (gender === 'female' ? 'She' : 'It'));
 const asList = (text) => text.split(', ').join(' and ');
 
@@ -58,10 +59,81 @@ export const RESOURCES = {
       It has ${starship.consumables} consumables, ${starship.hyperdrive_rating} hyperdrive rating, ${starship.MGLT} MGLT, and starship class of ${starship.starship_class}.
     `,
   },
+  films: {
+    path: 'films/',
+    label: 'Films',
+    // SWAPI calls a film's name its title; everything downstream uses `name`
+    nameField: 'title',
+    imagePosition: { page: 'top', card: 'top' },
+    cardText: (film) => (
+      `Episode ${film.episode_id}, directed by ${film.director} and released in ${film.release_date}`
+    ),
+    describe: (film) => `
+      ${film.name} is episode ${film.episode_id} of the saga, directed by ${film.director}
+      and produced by ${film.producer}. It was released on ${film.release_date}.
+
+      ${trimmed(film.opening_crawl)}
+    `,
+  },
+
+  species: {
+    path: 'species/',
+    label: 'Species',
+    imagePosition: { page: 'left', card: 'left' },
+    cardText: (species) => (
+      `${species.name} are a ${species.classification} species that speak ${species.language}`
+    ),
+    describe: (species) => `
+      ${species.name} are a ${species.classification} species, designated ${species.designation},
+      and speak ${species.language}. They stand ${species.average_height} on average
+      and live for about ${species.average_lifespan} years.
+
+      They have ${species.skin_colors} skin, ${species.hair_colors} hair and ${species.eye_colors} eyes.
+    `,
+  },
+
+  vehicles: {
+    path: 'vehicles/',
+    label: 'Vehicles',
+    imagePosition: { page: 'top', card: 'top' },
+    cardText: (vehicle) => (
+      `${vehicle.name} is a ${vehicle.vehicle_class} vehicle, and has a cargo of ${vehicle.cargo_capacity}`
+    ),
+    describe: (vehicle) => `
+      ${vehicle.name} is a ${vehicle.vehicle_class} vehicle of the ${vehicle.model} model,
+      manufactured by ${vehicle.manufacturer}. It cost ${vehicle.cost_in_credits} credits.
+
+      It has a length of ${vehicle.length}, a maximum atmosphering speed of ${vehicle.max_atmosphering_speed},
+      a crew of ${vehicle.crew} and room for ${vehicle.passengers} passengers.
+      It carries ${vehicle.cargo_capacity} of cargo and ${vehicle.consumables} of consumables.
+    `,
+  },
 };
 
-// In the order they are listed on the home page search results and in the routes
+// In the order they are listed in search results and in the routes
 export const RESOURCE_KEYS = Object.keys(RESOURCES);
+
+// Films are titled rather than named. Every item is given a `name` as it comes
+// in from the API, so the store, search, routes and cards only ever deal with
+// one field. The original field is kept alongside it.
+export const normalise = (resource, item) => {
+  const field = RESOURCES[resource].nameField;
+  if (!field || !item || typeof item[field] !== 'string') return item;
+  return { ...item, name: item[field] };
+};
+
+export const normaliseAll = (resource, items) => items.map(item => normalise(resource, item));
+
+// The home page, in the order its sections appear. `slider` steps through the
+// items a few at a time; `cards` lays them all out at once.
+export const HOME_SECTIONS = [
+  { resource: 'starships', display: 'cards', count: 6 },
+  { resource: 'planets', display: 'slider', count: 9 },
+  { resource: 'characters', display: 'cards', count: 4 },
+  { resource: 'films', display: 'cards', count: 6 },
+  { resource: 'species', display: 'slider', count: 9 },
+  { resource: 'vehicles', display: 'cards', count: 6 },
+];
 
 // Routes. Items are addressed by name: "Luke Skywalker" becomes luke_skywalker.
 export const listPath = (resource) => `/${resource}`;

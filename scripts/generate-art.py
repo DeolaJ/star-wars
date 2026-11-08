@@ -4,7 +4,8 @@ Every image is drawn procedurally from a fixed seed, so running this again
 produces the same files. Needs Python 3 with numpy and Pillow (built with WebP).
 
     python scripts/generate-art.py            # everything
-    python scripts/generate-art.py planets    # one group: hero, characters, planets, starships
+    python scripts/generate-art.py planets    # one group: hero, characters, planets,
+                                              # starships, films, species, vehicles
 """
 import os
 import sys
@@ -15,7 +16,10 @@ sys.path.insert(0, os.path.join(HERE, 'art'))
 
 from common import save_webp, to_image  # noqa: E402
 import characters  # noqa: E402
+import films  # noqa: E402
 import ships  # noqa: E402
+import species  # noqa: E402
+import vehicles  # noqa: E402
 import worlds  # noqa: E402
 
 OUT = os.path.join(HERE, '..', 'src', 'assets', 'images')
@@ -30,6 +34,9 @@ GROUPS = {
     'planets': [(f'planet-{i + 1}', f, (600, 1200), 78)
                 for i, f in enumerate([worlds.desert_world, worlds.ice_world, worlds.ocean_world])],
     'starships': [(f'starship-{i + 1}', f, (720, 1600), 78) for i, f in enumerate(ships.SHIPS)],
+    'films': [(f'film-{i + 1}', f, (720, 1600), 78) for i, f in enumerate(films.FILMS)],
+    'species': [(f'species-{i + 1}', f, (600, 1200), 78) for i, f in enumerate(species.SPECIES)],
+    'vehicles': [(f'vehicle-{i + 1}', f, (720, 1600), 78) for i, f in enumerate(vehicles.VEHICLES)],
 }
 
 

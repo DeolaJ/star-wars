@@ -8,6 +8,9 @@ const SETS = {
   characters: { prefix: 'character', count: 4, widths: [600, 1200], ratio: [1, 1] },
   planets: { prefix: 'planet', count: 3, widths: [600, 1200], ratio: [1, 1] },
   starships: { prefix: 'starship', count: 6, widths: [720, 1600], ratio: [16, 9] },
+  films: { prefix: 'film', count: 3, widths: [720, 1600], ratio: [16, 9] },
+  species: { prefix: 'species', count: 4, widths: [600, 1200], ratio: [1, 1] },
+  vehicles: { prefix: 'vehicle', count: 4, widths: [720, 1600], ratio: [16, 9] },
 };
 
 const imageSet = (name, widths, [rw, rh]) => ({
@@ -62,6 +65,32 @@ const MATCHERS = {
     if (/shuttle|landing craft|yacht|barge|patrol|lander/.test(text)) return [6];
     if (/freighter|transport|cargo|container|hauler/.test(text)) return [3];
     if (/fighter|bomber|interceptor|wing|assault|scout|tie/.test(text)) return [2, 4];
+    return null;
+  },
+  // 1 prequel era, 2 original era, 3 anything later
+  films: (item) => {
+    const episode = Number(item.episode_id);
+    if (episode >= 1 && episode <= 3) return [1];
+    if (episode >= 4 && episode <= 6) return [2];
+    if (episode >= 7) return [3];
+    return null;
+  },
+  species: (item) => {
+    const text = `${item.classification || ''} ${item.designation || ''}`.toLowerCase();
+    // 1 humanoid, 2 reptilian, 3 insectoid, 4 artificial
+    if (/artificial|droid|synthetic/.test(text)) return [4];
+    if (/reptil|saurian|amphibian/.test(text)) return [2];
+    if (/insectoid|arthropod|mollusk|gastropod|cephalopod/.test(text)) return [3];
+    if (/mammal|human|primate|wookiee/.test(text)) return [1];
+    return null;
+  },
+  vehicles: (item) => {
+    const text = `${item.vehicle_class || ''} ${item.model || ''} ${item.name}`.toLowerCase();
+    // 1 walker, 2 speeder, 3 heavy ground transport, 4 atmospheric flyer
+    if (/walker|legged/.test(text)) return [1];
+    if (/speeder|repulsorcraft|hover/.test(text)) return [2];
+    if (/wheeled|tracked|tank|digger|crawler|harvester|transport|carrier|barge|sail/.test(text)) return [3];
+    if (/starfighter|fighter|bomber|gunship|glider|assault|airspeeder/.test(text)) return [4];
     return null;
   },
 };

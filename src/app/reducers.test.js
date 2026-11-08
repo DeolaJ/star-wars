@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import reducer, { defaultState } from './reducers';
 import * as types from './actions';
+import { RESOURCE_KEYS } from '../resources';
 
 const characters = [
   { name: 'Luke Skywalker', gender: 'male', height: '172', mass: '77', hair_color: 'blond', eye_color: 'blue', skin_color: 'fair', birth_year: '19BBY' },
@@ -108,7 +109,7 @@ describe('resource-generic state', () => {
     isFiltering: `isFiltering${resource[0].toUpperCase()}${resource.slice(1)}`,
   });
 
-  it.each(['characters', 'planets', 'starships'])('starts with the full set of state for %s', (resource) => {
+  it.each(RESOURCE_KEYS)('starts with the full set of state for %s', (resource) => {
     const keys = stateFor(resource);
     expect(defaultState[keys.items]).toEqual([]);
     expect(defaultState[keys.paging]).toEqual({ count: 0, pages: {}, loading: {}, errors: {} });
