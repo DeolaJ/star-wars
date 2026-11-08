@@ -79,6 +79,13 @@ describe('resource configuration', () => {
       .toBe('Sand Crawler is a wheeled vehicle, and has a cargo of 50000');
   });
 
+  it('picks the right article for a vowel-initial classification', () => {
+    expect(RESOURCES.species.cardText({ name: 'Droid', classification: 'artificial', language: 'n/a' }))
+      .toBe('Droid are an artificial species that speak n/a');
+    expect(RESOURCES.vehicles.cardText({ name: 'Snowspeeder', vehicle_class: 'airspeeder', cargo_capacity: '10' }))
+      .toBe('Snowspeeder is an airspeeder vehicle, and has a cargo of 10');
+  });
+
   it('builds routes from the resource and the item name', () => {
     expect(listPath('planets')).toBe('/planets');
     expect(descriptionPath('characters', 'Luke Skywalker')).toBe('/description/characters/luke_skywalker');

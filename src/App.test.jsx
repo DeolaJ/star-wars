@@ -92,7 +92,8 @@ describe('App', () => {
     const urls = fetchedUrls(fetchSpy);
     expect(urls.filter(url => url === page('characters', 1))).toHaveLength(1);
     expect(urls.filter(url => url === page('characters', 2))).toHaveLength(1);
-    expect(urls).toHaveLength(4);
+    // The first page of every resource, plus the one extra page opened here
+    expect(urls).toHaveLength(firstPages.length + 1);
   });
 
   it('shows a loading message while a page is on its way', async () => {
@@ -355,9 +356,10 @@ describe('films, species and vehicles', () => {
     await screen.findByText('Starwars Films');
     expect(screen.getByText('A New Hope')).toBeInTheDocument();
     expect(screen.getByText(/Episode 4, directed by George Lucas/)).toBeInTheDocument();
-    const link = screen.getAllByRole('link', { name: 'Read more' })
+    const link = screen.getAllByRole('link')
       .find(l => l.getAttribute('href') === '/description/films/a_new_hope');
     expect(link).toBeDefined();
+    expect(link).toHaveTextContent('Read more');
   });
 
   it('gives films a single page, since they all fit on one', async () => {

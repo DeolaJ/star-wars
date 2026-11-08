@@ -77,12 +77,18 @@ describe('artwork', () => {
       expect(expected).toContain(number(artworkFor('starships', { name, starship_class: starshipClass, model: '' })));
     });
 
-    it.each([
-      ['The Phantom Menace', 1, 1], ['Attack of the Clones', 2, 1], ['Revenge of the Sith', 3, 1],
-      ['A New Hope', 4, 2], ['The Empire Strikes Back', 5, 2], ['Return of the Jedi', 6, 2],
-      ['The Force Awakens', 7, 3],
-    ])('gives %s the artwork for its era', (name, episode, expected) => {
-      expect(number(artworkFor('films', { name, episode_id: episode }))).toBe(expected);
+    // The API only has episodes 1-6, so films spread over the whole set by name
+    // rather than being bucketed by era, which would never show one of the three
+    it('spreads the real films across every film picture', () => {
+      const titles = ['A New Hope', 'The Empire Strikes Back', 'Return of the Jedi',
+        'The Phantom Menace', 'Attack of the Clones', 'Revenge of the Sith'];
+      const used = titles.map(name => number(artworkFor('films', { name, episode_id: 4 })));
+      expect(new Set(used).size).toBe(3);
+    });
+
+    it('gives a film the same picture whatever its episode number', () => {
+      expect(artworkFor('films', { name: 'A New Hope', episode_id: 4 }))
+        .toEqual(artworkFor('films', { name: 'A New Hope', episode_id: 7 }));
     });
 
     it.each([

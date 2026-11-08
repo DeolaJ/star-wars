@@ -13,6 +13,8 @@
 
 const firstWord = (name) => name.split(' ')[0];
 const trimmed = (text) => (text || '').replace(/\s+/g, ' ').trim();
+// "a mammal species" but "an artificial species"
+const article = (word) => (/^[aeiou]/i.test(word || '') ? 'an' : 'a');
 const pronoun = (gender) => (gender === 'male' ? 'He' : (gender === 'female' ? 'She' : 'It'));
 const asList = (text) => text.split(', ').join(' and ');
 
@@ -81,10 +83,10 @@ export const RESOURCES = {
     label: 'Species',
     imagePosition: { page: 'left', card: 'left' },
     cardText: (species) => (
-      `${species.name} are a ${species.classification} species that speak ${species.language}`
+      `${species.name} are ${article(species.classification)} ${species.classification} species that speak ${species.language}`
     ),
     describe: (species) => `
-      ${species.name} are a ${species.classification} species, designated ${species.designation},
+      ${species.name} are ${article(species.classification)} ${species.classification} species, designated ${species.designation},
       and speak ${species.language}. They stand ${species.average_height} on average
       and live for about ${species.average_lifespan} years.
 
@@ -97,10 +99,10 @@ export const RESOURCES = {
     label: 'Vehicles',
     imagePosition: { page: 'top', card: 'top' },
     cardText: (vehicle) => (
-      `${vehicle.name} is a ${vehicle.vehicle_class} vehicle, and has a cargo of ${vehicle.cargo_capacity}`
+      `${vehicle.name} is ${article(vehicle.vehicle_class)} ${vehicle.vehicle_class} vehicle, and has a cargo of ${vehicle.cargo_capacity}`
     ),
     describe: (vehicle) => `
-      ${vehicle.name} is a ${vehicle.vehicle_class} vehicle of the ${vehicle.model} model,
+      ${vehicle.name} is ${article(vehicle.vehicle_class)} ${vehicle.vehicle_class} vehicle of the ${vehicle.model} model,
       manufactured by ${vehicle.manufacturer}. It cost ${vehicle.cost_in_credits} credits.
 
       It has a length of ${vehicle.length}, a maximum atmosphering speed of ${vehicle.max_atmosphering_speed},

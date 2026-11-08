@@ -3,10 +3,14 @@ import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { resetApiState } from '../app/api';
 
-// Recent Node versions ship their own experimental localStorage global, which
-// hides jsdom's and is undefined unless Node is given a storage file. Provide an
-// in-memory Storage so tests behave like a browser.
-if (typeof globalThis.localStorage === 'undefined' || globalThis.localStorage === null) {
+// Always provide our own in-memory Storage rather than relying on whatever the
+// environment supplies. Node ships an experimental localStorage global and jsdom
+// supplies one too, and jsdom's is a proxy-backed platform object that silently
+// swallows `vi.spyOn(localStorage, ...)` (the spy is stored as a named item
+// instead of replacing the method), so tests of the quota path never ran.
+// A plain object behaves like a browser's and can be spied on. `window` is the
+// global object under vitest's jsdom environment, so this covers both.
+{
   class MemoryStorage {
     #items = new Map();
     get length() { return this.#items.size; }

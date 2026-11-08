@@ -33,6 +33,9 @@ const pick = (name, choices) => choices[stableIndex(name, choices.length)];
 
 // Rules matching what the API says about an item to the artwork that shows it.
 // Each returns the image numbers to choose from; null falls back to any image.
+// A resource with no rule here spreads across its whole set. Films do that on
+// purpose: the API only has episodes 1-6, so bucketing them by era left two of
+// the three scenes doing all the work and the third never shown at all.
 const MATCHERS = {
   characters: (item) => {
     // SWAPI's droid species is /species/2/; droid names also tend to carry digits
@@ -67,14 +70,6 @@ const MATCHERS = {
     if (/fighter|bomber|interceptor|wing|assault|scout|tie/.test(text)) return [2, 4];
     return null;
   },
-  // 1 prequel era, 2 original era, 3 anything later
-  films: (item) => {
-    const episode = Number(item.episode_id);
-    if (episode >= 1 && episode <= 3) return [1];
-    if (episode >= 4 && episode <= 6) return [2];
-    if (episode >= 7) return [3];
-    return null;
-  },
   species: (item) => {
     const text = `${item.classification || ''} ${item.designation || ''}`.toLowerCase();
     // 1 humanoid, 2 reptilian, 3 insectoid, 4 artificial
@@ -102,7 +97,8 @@ export const artworkFor = (category, item = {}) => {
   const subject = typeof item === 'string' ? { name: item } : item;
   const name = (subject.name || '').toLowerCase();
   const all = Array.from({ length: set.count }, (_, i) => i + 1);
-  const choices = MATCHERS[category](subject) || all;
+  const matcher = MATCHERS[category];
+  const choices = (matcher && matcher(subject)) || all;
   return imageSet(`${set.prefix}-${pick(name, choices)}`, set.widths, set.ratio);
 };
 
