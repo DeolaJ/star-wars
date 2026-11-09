@@ -57,14 +57,29 @@
     align-items: center;
 
     &__left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: center;
+
       .dropdown {
         padding: .6rem;
         border-radius: .4rem;
+        max-width: 14rem;
       }
     }
 
     &__right {
-      flex-basis: 50%;
+      flex-basis: 40%;
+    }
+
+    @media (max-width: 768px) {
+      flex-wrap: wrap;
+      gap: 1rem;
+
+      &__right {
+        flex-basis: 100%;
+      }
     }
   }
 

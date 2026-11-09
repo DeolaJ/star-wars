@@ -1,24 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import debounce from 'lodash/debounce';
+import React from 'react';
 import PropTypes from 'prop-types';
 import Hero from './partials/hero';
 import SearchBar from './partials/searchbar';
 import Emblem from '../assets/emblem.svg';
 
+// The search box already waits for the typing to stop, so there is nothing to
+// hold back here; the query itself belongs to the page above
 const MainHero = ({
-  doSearchAll, resetSearchAll,
+  doSearchAll, resetSearchAll, searchValue = '',
 }) => {
-  const [searchParams, setSearchParams] = useState('');
-
-  const performSearch = useRef(debounce((searchParams) => {
-    if (searchParams.length > 0) {
-      doSearchAll(searchParams);
+  const handleSearch = (text) => {
+    if (text.length > 0) {
+      doSearchAll(text);
     } else {
       resetSearchAll();
     }
-  }, 1000));
-
-  useEffect(() => performSearch.current(searchParams), [searchParams]);
+  };
 
   return (
     <Hero>
@@ -31,7 +28,8 @@ const MainHero = ({
           Find you favourite Characters, Films, Species, Starships and Planets.
         </h3>
         <SearchBar 
-          handleSearch={setSearchParams}
+          value={searchValue}
+          handleSearch={handleSearch}
         />
       </div>
     </Hero>
@@ -41,6 +39,7 @@ const MainHero = ({
 MainHero.propTypes = {
   doSearchAll: PropTypes.func.isRequired,
   resetSearchAll: PropTypes.func.isRequired,
+  searchValue: PropTypes.string,
 };
 
 export default MainHero;

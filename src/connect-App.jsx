@@ -17,6 +17,9 @@ const mapDispatchToProps = (dispatch) => ({
   doFetchPage(resource, page) {
     dispatch(appActions.doFetchPage(resource, page))
   },
+  doFetchAll(resource) {
+    dispatch(appActions.doFetchAll(resource))
+  },
   doSearch(resource, param) {
     dispatch(appActions.doSearch(resource, param))
   },

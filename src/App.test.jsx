@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import App from './connect-App';
 import configureAppStore from './modules/store';
@@ -11,7 +11,20 @@ import { API_ENDPOINTS } from './config';
 import { mockFetch, fetchedUrls, mirrorUrl } from './test/fixtures';
 
 // The current path, so a test can check the URL moved with the content
-const LocationProbe = () => <span data-testid="location">{useLocation().pathname}</span>;
+// Shows where the router is, and steps through its history the way the
+// browser's back and forward buttons do
+const LocationProbe = () => {
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <span data-testid="location">{pathname}</span>
+      <span data-testid="search">{search}</span>
+      <button type="button" data-testid="go-back" onClick={() => navigate(-1)}>back</button>
+      <button type="button" data-testid="go-forward" onClick={() => navigate(1)}>forward</button>
+    </>
+  );
+};
 
 const renderApp = (route = '/') => {
   const store = configureAppStore({ app: { ...defaultState } });
@@ -559,4 +572,180 @@ describe('detail page navigation', () => {
     const names = [...document.querySelectorAll('.recently-viewed .list-item h4')].map(h => h.textContent);
     expect(names.filter(name => name === 'X-wing')).toHaveLength(1);
   });
+});
+
+describe('the address bar holds the list state', () => {
+  const url = () => screen.getByTestId('search').textContent;
+  const names = () => [...document.querySelectorAll('.list-item h4')].map(h => h.textContent.trim());
+
+  it('puts the page in the URL, and leaves it out for the first page', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    expect(url()).toBe('');
+
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(await screen.findByText('Extra Planet 1')).toBeInTheDocument();
+    expect(url()).toBe('?page=2');
+
+    await userEvent.click(screen.getByRole('button', { name: '1' }));
+    expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+    expect(url()).toBe('');
+  });
+
+  it('opens a shared link straight onto the page it names', async () => {
+    mockFetch();
+    renderApp('/planets?page=2');
+    expect(await screen.findByText('Extra Planet 1')).toBeInTheDocument();
+    expect(screen.queryByText('Tatooine')).not.toBeInTheDocument();
+  });
+
+  it('puts the sort in the URL and reorders the list', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    expect(names()[0]).toBe('Tatooine');
+
+    // Ascending, because descending still starts with Tatooine
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Sort' }), 'name');
+    await waitFor(() => expect(url()).toBe('?sort=name'));
+    await waitFor(() => expect(names()[0]).toBe('Extra Planet 1'));
+  });
+
+  it('puts the filter in the URL and narrows the list', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Climate' }), 'frozen');
+    await waitFor(() => expect(url()).toBe('?climate=frozen'));
+    // Every planet whose climate is frozen, from both pages
+    await waitFor(() => expect(names().sort()).toEqual(['Extra Planet 2', 'Planet 2', 'Planet 6']));
+  });
+
+  it('matches one value of a field holding several', async () => {
+    mockFetch();
+    renderApp('/planets?climate=tropical');
+    await screen.findByText('Starwars Planets');
+    await waitFor(() => expect(names().sort()).toEqual(['Extra Planet 3', 'Planet 3', 'Planet 7']));
+  });
+
+  it('opens a shared link carrying a filter and a sort, with the menus set', async () => {
+    mockFetch();
+    renderApp('/planets?climate=frozen&sort=-name');
+    await screen.findByText('Starwars Planets');
+    await waitFor(() => expect(names()).toEqual(['Planet 6', 'Planet 2', 'Extra Planet 2']));
+    expect(screen.getByRole('combobox', { name: 'Climate' })).toHaveValue('frozen');
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveValue('-name');
+  });
+
+  it('pages a sorted list rather than the pages the API gave', async () => {
+    mockFetch();
+    renderApp('/planets?sort=name&page=2');
+    await screen.findByText('Starwars Planets');
+    // Thirteen planets by name: the last three fall on the second page
+    await waitFor(() => expect(names()).toEqual(['Planet 8', 'Planet 9', 'Tatooine']));
+  });
+
+  it('goes back to the first page when the filter changes', async () => {
+    mockFetch();
+    renderApp('/planets?page=2');
+    await screen.findByText('Extra Planet 1');
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Climate' }), 'frozen');
+    await waitFor(() => expect(url()).toBe('?climate=frozen'));
+  });
+
+  it('puts the search in the URL, and the dropdowns follow it', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+
+    await userEvent.type(screen.getAllByPlaceholderText('Enter a search item')[1], 'tatoo');
+    await waitFor(() => expect(url()).toBe('?q=tatoo'), { timeout: 4000 });
+    expect(await screen.findByText('PLANETS Results')).toBeInTheDocument();
+  }, 10000);
+
+  it('runs the search named by a shared link', async () => {
+    mockFetch();
+    const store = renderApp('/planets?q=tatoo');
+    await waitFor(() => expect(store.getState().app.isFilteringPlanets).toBe(true), { timeout: 4000 });
+    expect(await screen.findByText('PLANETS Results')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('Enter a search item')[1]).toHaveValue('tatoo');
+  }, 10000);
+});
+
+describe('back and forward restore the list state', () => {
+  const url = () => screen.getByTestId('search').textContent;
+  const names = () => [...document.querySelectorAll('.list-item h4')].map(h => h.textContent.trim());
+
+  it('steps back through the pages that were opened', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    await screen.findByText('Extra Planet 1');
+
+    await userEvent.click(screen.getByTestId('go-back'));
+    await waitFor(() => expect(url()).toBe(''));
+    expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('go-forward'));
+    await waitFor(() => expect(url()).toBe('?page=2'));
+    expect(await screen.findByText('Extra Planet 1')).toBeInTheDocument();
+  });
+
+  it('leaves a sort behind on the way back, and the list with it', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Sort' }), 'name');
+    await waitFor(() => expect(names()[0]).toBe('Extra Planet 1'));
+
+    await userEvent.click(screen.getByTestId('go-back'));
+    await waitFor(() => expect(url()).toBe(''));
+    await waitFor(() => expect(names()[0]).toBe('Tatooine'));
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveValue('');
+  });
+
+  it('replaces rather than stacking a history entry per letter typed', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+
+    // Opening a page is a step worth going back to
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    await screen.findByText('Extra Planet 1');
+    expect(url()).toBe('?page=2');
+
+    await userEvent.type(screen.getAllByPlaceholderText('Enter a search item')[1], 'tatoo');
+    await waitFor(() => expect(url()).toBe('?q=tatoo'), { timeout: 4000 });
+
+    // Typing replaced that step, so one move back passes the search and the
+    // page together instead of undoing a letter at a time
+    await userEvent.click(screen.getByTestId('go-back'));
+    await waitFor(() => expect(url()).toBe(''));
+    expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+  }, 10000);
+});
+
+describe('the home search is shareable too', () => {
+  it('puts the site-wide search in the URL', async () => {
+    mockFetch();
+    const store = renderApp('/');
+    await screen.findByText('Popular Characters');
+
+    await userEvent.type(screen.getByPlaceholderText('Enter a search item'), 'tatoo');
+    await waitFor(() => expect(store.getState().app.isFilteringAll).toBe(true), { timeout: 4000 });
+    expect(screen.getByTestId('search')).toHaveTextContent('?q=tatoo');
+  }, 10000);
+
+  it('runs a shared site-wide search on arrival', async () => {
+    mockFetch();
+    const store = renderApp('/?q=tatoo');
+    await waitFor(() => expect(store.getState().app.isFilteringAll).toBe(true), { timeout: 4000 });
+    expect(await screen.findByText('All Results')).toBeInTheDocument();
+    expect(store.getState().app.allFilteredPlanets.map(p => p.name)).toEqual(['Tatooine']);
+  }, 10000);
 });

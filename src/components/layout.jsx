@@ -6,7 +6,7 @@ import Footer from './partials/footer';
 const noop = () => null;
 
 const Layout = ({
-  children, description, doSearchAll = noop, resetSearchAll = noop,
+  children, description, doSearchAll = noop, resetSearchAll = noop, searchValue = '',
 }) => {
   return (
     <>
@@ -15,6 +15,7 @@ const Layout = ({
           <MainHero 
             doSearchAll={doSearchAll}
             resetSearchAll={resetSearchAll}
+            searchValue={searchValue}
           />
         )
       }
@@ -30,6 +31,8 @@ Layout.propTypes = {
   description: PropTypes.bool,
   doSearchAll: PropTypes.func,
   resetSearchAll: PropTypes.func,
+  // What the hero's search box shows; the home page keeps it in the URL
+  searchValue: PropTypes.string,
 };
 
 export default Layout;

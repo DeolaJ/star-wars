@@ -17,6 +17,9 @@ export const API_TIMEOUT_MS = 8000;
 // After swapi.dev fails, the mirror is tried first for this long
 export const API_PRIMARY_RETRY_MS = 5 * 60 * 1000;
 
+// SWAPI returns ten results per page, which is also the page size of the list pages
+export const API_PAGE_SIZE = 10;
+
 // Paths of each resource, relative to a base URL
 export const API_PATHS = Object.fromEntries(
   RESOURCE_KEYS.map(resource => [resource, RESOURCES[resource].path])

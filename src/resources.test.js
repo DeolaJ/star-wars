@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath, resourceForPath, relatedUrls } from './resources';
+import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath, resourceForPath, relatedUrls, filterValues, filterItems, sortItems } from './resources';
 import { API_BASE_URL, API_PATHS, API_ENDPOINTS } from './config';
 
 describe('resource configuration', () => {
@@ -117,5 +117,89 @@ describe('related links', () => {
     expect(relatedUrls('unknown')).toEqual([]);
     expect(relatedUrls('n/a')).toEqual([]);
     expect(relatedUrls([])).toEqual([]);
+  });
+});
+
+describe('filtering and sorting', () => {
+  const planets = [
+    { name: 'Tatooine', climate: 'arid', population: '200000' },
+    { name: 'Hoth', climate: 'frozen', population: 'unknown' },
+    { name: 'Yavin IV', climate: 'temperate, tropical', population: '1000' },
+    { name: 'Bespin', climate: 'temperate', population: '6000000' },
+  ];
+  const sortFields = RESOURCES.planets.sortFields;
+
+  it.each(RESOURCE_KEYS)('%s says what it can be filtered and sorted by', (key) => {
+    expect(RESOURCES[key].filters.length).toBeGreaterThan(0);
+    RESOURCES[key].filters.forEach(({ field, label }) => {
+      expect(field).toMatch(/^[a-z_]+$/);
+      expect(label).toBeTruthy();
+    });
+    expect(RESOURCES[key].sortFields.length).toBeGreaterThan(0);
+    RESOURCES[key].sortFields.forEach(({ field, label }) => {
+      expect(field).toMatch(/^[a-z_]+$/);
+      expect(label).toBeTruthy();
+    });
+  });
+
+  describe('the values a filter offers', () => {
+    it('lists each value once, in order, splitting fields that hold several', () => {
+      expect(filterValues(planets, 'climate')).toEqual(['arid', 'frozen', 'temperate', 'tropical']);
+    });
+
+    it('ignores items with nothing in the field', () => {
+      expect(filterValues([{ name: 'A' }, { name: 'B', climate: '' }, { name: 'C', climate: 'arid' }], 'climate'))
+        .toEqual(['arid']);
+    });
+  });
+
+  describe('narrowing', () => {
+    it('keeps only the items with the chosen value', () => {
+      expect(filterItems(planets, { climate: 'frozen' }).map(p => p.name)).toEqual(['Hoth']);
+    });
+
+    it('matches one value of a field that holds several', () => {
+      expect(filterItems(planets, { climate: 'temperate' }).map(p => p.name)).toEqual(['Yavin IV', 'Bespin']);
+      expect(filterItems(planets, { climate: 'tropical' }).map(p => p.name)).toEqual(['Yavin IV']);
+    });
+
+    it('matches whatever the letter case', () => {
+      expect(filterItems(planets, { climate: 'FROZEN' }).map(p => p.name)).toEqual(['Hoth']);
+    });
+
+    it('leaves the list alone when nothing is chosen', () => {
+      expect(filterItems(planets, { climate: '' })).toBe(planets);
+      expect(filterItems(planets, {})).toBe(planets);
+    });
+  });
+
+  describe('ordering', () => {
+    const names = (key) => sortItems(planets, key, sortFields).map(p => p.name);
+
+    it('orders by name both ways', () => {
+      expect(names('name')).toEqual(['Bespin', 'Hoth', 'Tatooine', 'Yavin IV']);
+      expect(names('-name')).toEqual(['Yavin IV', 'Tatooine', 'Hoth', 'Bespin']);
+    });
+
+    it('compares a numeric field as numbers, not text', () => {
+      expect(names('population')).toEqual(['Yavin IV', 'Tatooine', 'Bespin', 'Hoth']);
+      expect(names('-population')).toEqual(['Bespin', 'Tatooine', 'Yavin IV', 'Hoth']);
+    });
+
+    it('puts a value the API does not have last, whichever way round it is', () => {
+      expect(names('population')[3]).toBe('Hoth');
+      expect(names('-population')[3]).toBe('Hoth');
+    });
+
+    it('leaves the list alone for no sort, or one it does not know', () => {
+      expect(sortItems(planets, '', sortFields)).toBe(planets);
+      expect(sortItems(planets, 'colour', sortFields)).toBe(planets);
+    });
+
+    it('does not disturb the list it was given', () => {
+      const before = planets.map(p => p.name);
+      sortItems(planets, '-name', sortFields);
+      expect(planets.map(p => p.name)).toEqual(before);
+    });
   });
 });

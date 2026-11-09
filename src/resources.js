@@ -12,6 +12,11 @@
 //   describe       the paragraph shown on the detail page
 //   related        the fields holding links to other items, with a heading for
 //                  each; the linked resource is read from the link itself
+//   filters        fields the list can be narrowed by; the options come from
+//                  the data rather than a fixed list, as the API keeps adding
+//                  values (36 starship classes and counting)
+//   sortFields     fields the list can be ordered by; `numeric` ones compare as
+//                  numbers, with "unknown" and "n/a" last
 
 const firstWord = (name) => name.split(' ')[0];
 const trimmed = (text) => (text || '').replace(/\s+/g, ' ').trim();
@@ -30,6 +35,8 @@ export const RESOURCES = {
       { field: 'species', label: 'Species' }, { field: 'starships', label: 'Starships' },
       { field: 'vehicles', label: 'Vehicles' },
     ],
+    filters: [{ field: 'gender', label: 'Gender' }],
+    sortFields: [{ field: 'name', label: 'Name' }, { field: 'height', label: 'Height', numeric: true }, { field: 'mass', label: 'Mass', numeric: true }],
     cardText: (character) => (
       `${firstWord(character.name)} was born in the year ${character.birth_year}, and is ${character.gender}`
     ),
@@ -46,6 +53,8 @@ export const RESOURCES = {
     label: 'Planets',
     imagePosition: { page: 'left', card: 'top' },
     related: [{ field: 'residents', label: 'Residents' }, { field: 'films', label: 'Films' }],
+    filters: [{ field: 'climate', label: 'Climate' }],
+    sortFields: [{ field: 'name', label: 'Name' }, { field: 'population', label: 'Population', numeric: true }, { field: 'diameter', label: 'Diameter', numeric: true }],
     cardText: (planet) => (
       `${planet.name} has a climate of ${planet.climate}, and a population of ${planet.population}`
     ),
@@ -61,6 +70,8 @@ export const RESOURCES = {
     label: 'Starships',
     imagePosition: { page: 'top', card: 'top' },
     related: [{ field: 'pilots', label: 'Pilots' }, { field: 'films', label: 'Films' }],
+    filters: [{ field: 'starship_class', label: 'Class' }],
+    sortFields: [{ field: 'name', label: 'Name' }, { field: 'cost_in_credits', label: 'Cost', numeric: true }, { field: 'length', label: 'Length', numeric: true }],
     cardText: (starship) => (
       `${firstWord(starship.name)} is of the ${starship.model} model, and has a cargo of ${starship.cargo_capacity}`
     ),
@@ -81,6 +92,8 @@ export const RESOURCES = {
       { field: 'starships', label: 'Starships' }, { field: 'vehicles', label: 'Vehicles' },
       { field: 'species', label: 'Species' },
     ],
+    filters: [{ field: 'director', label: 'Director' }],
+    sortFields: [{ field: 'episode_id', label: 'Episode', numeric: true }, { field: 'release_date', label: 'Release date' }, { field: 'name', label: 'Title' }],
     cardText: (film) => (
       `Episode ${film.episode_id}, directed by ${film.director} and released in ${film.release_date}`
     ),
@@ -97,6 +110,8 @@ export const RESOURCES = {
     label: 'Species',
     imagePosition: { page: 'left', card: 'left' },
     related: [{ field: 'homeworld', label: 'Homeworld' }, { field: 'people', label: 'People' }, { field: 'films', label: 'Films' }],
+    filters: [{ field: 'classification', label: 'Classification' }],
+    sortFields: [{ field: 'name', label: 'Name' }, { field: 'average_lifespan', label: 'Lifespan', numeric: true }],
     cardText: (species) => (
       `${species.name} are ${article(species.classification)} ${species.classification} species that speak ${species.language}`
     ),
@@ -114,6 +129,8 @@ export const RESOURCES = {
     label: 'Vehicles',
     imagePosition: { page: 'top', card: 'top' },
     related: [{ field: 'pilots', label: 'Pilots' }, { field: 'films', label: 'Films' }],
+    filters: [{ field: 'vehicle_class', label: 'Class' }],
+    sortFields: [{ field: 'name', label: 'Name' }, { field: 'cost_in_credits', label: 'Cost', numeric: true }, { field: 'length', label: 'Length', numeric: true }],
     cardText: (vehicle) => (
       `${vehicle.name} is ${article(vehicle.vehicle_class)} ${vehicle.vehicle_class} vehicle, and has a cargo of ${vehicle.cargo_capacity}`
     ),
@@ -163,6 +180,55 @@ export const resourceForPath = (path) => (
 export const relatedUrls = (value) => (
   (Array.isArray(value) ? value : [value]).filter(entry => typeof entry === 'string' && /^https?:\/\//.test(entry))
 );
+
+// The values a filter field takes across `items`. Fields such as a planet's
+// climate hold several at once ("temperate, tropical"), so each counts separately.
+export const filterValues = (items, field) => {
+  const values = new Set();
+  items.forEach(item => String(item[field] ?? '').split(',').forEach(part => {
+    const value = part.trim();
+    if (value) values.add(value);
+  }));
+  return [...values].sort((a, b) => a.localeCompare(b));
+};
+
+const hasValue = (item, field, value) => (
+  String(item[field] ?? '').split(',').some(part => part.trim().toLowerCase() === value.toLowerCase())
+);
+
+// Narrows `items` to those matching every chosen filter
+export const filterItems = (items, chosen) => (
+  Object.entries(chosen).reduce(
+    (rest, [field, value]) => (value ? rest.filter(item => hasValue(item, field, value)) : rest),
+    items,
+  )
+);
+
+const asNumber = (value) => {
+  const number = Number(String(value ?? '').replace(/,/g, ''));
+  return Number.isFinite(number) ? number : null;
+};
+
+// Orders `items` by `key`, descending when it starts with "-". Values the API
+// does not have ("unknown", "n/a") sort last whichever way round it is.
+export const sortItems = (items, key, sortFields) => {
+  if (!key) return items;
+  const descending = key.startsWith('-');
+  const field = descending ? key.slice(1) : key;
+  const config = sortFields.find(entry => entry.field === field);
+  if (!config) return items;
+  return [...items].sort((a, b) => {
+    if (config.numeric) {
+      const left = asNumber(a[field]);
+      const right = asNumber(b[field]);
+      if (left === null || right === null) return left === right ? 0 : (left === null ? 1 : -1);
+      return descending ? right - left : left - right;
+    }
+    const left = String(a[field] ?? '');
+    const right = String(b[field] ?? '');
+    return descending ? right.localeCompare(left) : left.localeCompare(right);
+  });
+};
 
 // Routes. Items are addressed by name: "Luke Skywalker" becomes luke_skywalker.
 export const listPath = (resource) => `/${resource}`;

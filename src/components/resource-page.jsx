@@ -7,7 +7,7 @@ import { resourceDataShape } from './resource-props';
 
 // The page for one resource: the hero with the site-wide search, then the list
 const ResourcePage = ({
-  resource, data, doFetchPage, doSearch, resetSearch, doSearchAll, resetSearchAll,
+  resource, data, doFetchPage, doFetchAll, doSearch, resetSearch, doSearchAll, resetSearchAll,
 }) => {
   // Leaving the page clears its search and the site-wide one, so the next page
   // starts clean
@@ -28,6 +28,7 @@ const ResourcePage = ({
         resource={resource}
         data={data}
         doFetchPage={doFetchPage}
+        doFetchAll={doFetchAll}
         doSearch={doSearch}
         resetSearch={resetSearch}
       />
@@ -39,6 +40,7 @@ ResourcePage.propTypes = {
   resource: PropTypes.oneOf(RESOURCE_KEYS).isRequired,
   data: resourceDataShape.isRequired,
   doFetchPage: PropTypes.func.isRequired,
+  doFetchAll: PropTypes.func.isRequired,
   doSearch: PropTypes.func.isRequired,
   resetSearch: PropTypes.func.isRequired,
   doSearchAll: PropTypes.func.isRequired,

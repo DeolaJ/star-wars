@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_PATHS } from '../config';
+import { API_BASE_URL, API_PAGE_SIZE, API_PATHS } from '../config';
 import { RESOURCE_KEYS, normalise, normaliseAll, resourceForPath } from '../resources';
 import { fetchFromAPI, toApiPath, apiPathOf } from './api';
 import { getCached, setCached } from './cache';
@@ -95,6 +95,18 @@ export const doFetchPage = (resource, page) => (dispatch, getState) => {
     }))
   })
 }
+
+// Filtering and sorting need every item, which SWAPI cannot do server-side, so
+// the remaining pages are fetched once and then come from the response cache.
+// Each page goes through doFetchPage, so a page already loaded or on its way is
+// never requested twice, and the mirror still stands in when swapi.dev fails.
+export const doFetchAll = (resource) => async (dispatch, getState) => {
+  await dispatch(doFetchPage(resource, 1));
+  const { count } = getState().app[stateKeys(resource).paging];
+  const pages = Math.ceil(count / API_PAGE_SIZE);
+  const rest = Array.from({ length: Math.max(0, pages - 1) }, (_, index) => index + 2);
+  await Promise.all(rest.map(page => dispatch(doFetchPage(resource, page))));
+};
 
 // Search runs against the API so it covers every page, not only the loaded ones.
 // SWAPI also matches starship models, so results are narrowed to name matches
@@ -258,6 +270,7 @@ export const doSetDescription = (category, name) => async (dispatch, getState) =
 
 export default {
   doFetchPage,
+  doFetchAll,
   doSearch,
   doSearchAll,
   resetSearch,

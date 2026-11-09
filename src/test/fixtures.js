@@ -6,12 +6,27 @@ const person = (name, gender = 'male') => ({
   eye_color: 'blue', skin_color: 'fair', birth_year: '19BBY',
   homeworld: null, films: [], species: [], vehicles: [], starships: [],
 });
-const planet = (name) => ({
-  name, rotation_period: '23', diameter: '10465', orbital_period: '304',
-  climate: 'arid', gravity: '1 standard', terrain: 'desert',
-  population: '200000', surface_water: '1',
-  residents: [], films: [],
-});
+// Climate and population vary with the number in the name so filtering and
+// sorting have something to work on. Tatooine, which has no number, keeps the
+// values the other tests expect, and one planet's population is unknown so the
+// ordering of missing values is covered.
+const planet = (name) => {
+  const n = Number((name.match(/\d+/) || [0])[0]);
+  const climates = ['arid', 'temperate', 'frozen', 'temperate, tropical'];
+  return {
+    name,
+    rotation_period: '23',
+    diameter: String(10465 + n),
+    orbital_period: '304',
+    climate: climates[n % 4],
+    gravity: '1 standard',
+    terrain: 'desert',
+    population: n === 0 ? '200000' : (n % 5 === 0 ? 'unknown' : String(n * 1000)),
+    surface_water: '1',
+    residents: [],
+    films: [],
+  };
+};
 // SWAPI titles a film rather than naming it; the app normalises that on ingest
 const film = (title, episode = 4) => ({
   title, episode_id: episode, director: 'George Lucas', producer: 'Gary Kurtz',

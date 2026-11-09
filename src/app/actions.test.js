@@ -711,3 +711,81 @@ describe('related items', () => {
     expect(store.getState().app.descriptionItem.category.name).toBe('Extra Person 1');
   });
 });
+
+describe('loading a whole resource', () => {
+  it('fetches every page once, and holds them all', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchAll('planets'));
+
+    expect(fetchedUrls(fetchSpy).sort()).toEqual([page('planets', 1), page('planets', 2)].sort());
+    expect(store.getState().app.planets).toHaveLength(13);
+    expect(store.getState().app.planetsPaging.count).toBe(13);
+  });
+
+  it('asks for nothing more when it is already loaded', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchAll('planets'));
+    fetchSpy.mockClear();
+
+    await store.dispatch(actions.doFetchAll('planets'));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not fetch a page the list already had', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+    await store.dispatch(actions.doFetchPage('planets', 1));
+    fetchSpy.mockClear();
+
+    await store.dispatch(actions.doFetchAll('planets'));
+
+    expect(fetchedUrls(fetchSpy)).toEqual([page('planets', 2)]);
+  });
+
+  it('makes one request for a resource that fits on a single page', async () => {
+    const fetchSpy = mockFetch();
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchAll('films'));
+
+    expect(fetchedUrls(fetchSpy)).toEqual([page('films', 1)]);
+    expect(store.getState().app.films).toHaveLength(6);
+  });
+
+  it('comes from the cache on the next visit, without a request', async () => {
+    const fetchSpy = mockFetch();
+    await makeStore().dispatch(actions.doFetchAll('planets'));
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    const revisit = makeStore();
+    await revisit.dispatch(actions.doFetchAll('planets'));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(revisit.getState().app.planets).toHaveLength(13);
+  });
+
+  it('falls back to the mirror like any other page', async () => {
+    const fetchSpy = mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchAll('starships'));
+
+    expect(fetchedUrls(fetchSpy)).toContain(mirrorUrl(page('starships', 2)));
+    expect(store.getState().app.starships).toHaveLength(12);
+  });
+
+  it('keeps what it could get when a later page fails', async () => {
+    mockFetch({ [page('planets', 2)]: new Error('Timeout') });
+    const store = makeStore();
+
+    await store.dispatch(actions.doFetchAll('planets'));
+
+    expect(store.getState().app.planets).toHaveLength(10);
+    expect(store.getState().app.planetsPaging.errors[2].message).toBe('Timeout');
+    expect(store.getState().app.loadingPlanetsError).toEqual({});
+  });
+});

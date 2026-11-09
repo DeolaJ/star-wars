@@ -21,7 +21,7 @@ class App extends PureComponent {
   render () {
     const {
       resources, isFilteringAll, recentlyViewed, descriptionItem, items,
-      doFetchPage, doSearch, resetSearch, doSearchAll, resetSearchAll,
+      doFetchPage, doFetchAll, doSearch, resetSearch, doSearchAll, resetSearchAll,
       setRecentlyViewed, doSetDescription, doFetchItem,
     } = this.props;
 
@@ -54,6 +54,7 @@ class App extends PureComponent {
                   resource={resource}
                   data={resources[resource]}
                   doFetchPage={doFetchPage}
+                  doFetchAll={doFetchAll}
                   doSearch={doSearch}
                   resetSearch={resetSearch}
                   doSearchAll={doSearchAll}
@@ -87,6 +88,7 @@ App.propTypes = {
   descriptionItem: PropTypes.object.isRequired,
   items: itemsShape.isRequired,
   doFetchPage: PropTypes.func.isRequired,
+  doFetchAll: PropTypes.func.isRequired,
   doSearch: PropTypes.func.isRequired,
   resetSearch: PropTypes.func.isRequired,
   doSearchAll: PropTypes.func.isRequired,
