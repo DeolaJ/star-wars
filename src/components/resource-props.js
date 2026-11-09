@@ -14,6 +14,8 @@ export const resourceDataShape = PropTypes.shape({
   search: PropTypes.objectOf(PropTypes.array).isRequired,
   filtered: PropTypes.arrayOf(PropTypes.object).isRequired,
   isFiltering: PropTypes.bool.isRequired,
+  // Why the last search did not run, or null when it did
+  searchError: PropTypes.shape({ message: PropTypes.string }),
 });
 
 // Every resource's state, by resource

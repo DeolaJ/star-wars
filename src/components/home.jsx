@@ -33,6 +33,12 @@ const Home = ({
   const results = Object.fromEntries(
     RESOURCE_KEYS.map(resource => [resource, resources[resource].filtered])
   );
+  const errors = Object.fromEntries(
+    RESOURCE_KEYS.map(resource => [resource, resources[resource].searchError])
+  );
+  // A failed search is not remembered, so running the site-wide search again
+  // only asks the API for the resources that failed
+  const retry = useCallback(() => doSearchAll(query), [doSearchAll, query]);
 
   return (
     <Layout
@@ -45,6 +51,9 @@ const Home = ({
         ? (
           <SearchResult
             results={results}
+            errors={errors}
+            query={query}
+            onRetry={retry}
           />
         )
         : (

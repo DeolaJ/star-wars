@@ -569,14 +569,14 @@ describe('detail page navigation', () => {
     await screen.findByRole('heading', { level: 1, name: 'Starship 1' });
     await userEvent.click(screen.getByRole('button', { name: 'previous icon' }));
     await screen.findByRole('heading', { level: 1, name: 'X-wing' });
-    const names = [...document.querySelectorAll('.recently-viewed .list-item h4')].map(h => h.textContent);
+    const names = [...document.querySelectorAll('.recently-viewed .list-item h3')].map(h => h.textContent);
     expect(names.filter(name => name === 'X-wing')).toHaveLength(1);
   });
 });
 
 describe('the address bar holds the list state', () => {
   const url = () => screen.getByTestId('search').textContent;
-  const names = () => [...document.querySelectorAll('.list-item h4')].map(h => h.textContent.trim());
+  const names = () => [...document.querySelectorAll('.list-item h3')].map(h => h.textContent.trim());
 
   it('puts the page in the URL, and leaves it out for the first page', async () => {
     mockFetch();
@@ -677,7 +677,7 @@ describe('the address bar holds the list state', () => {
 
 describe('back and forward restore the list state', () => {
   const url = () => screen.getByTestId('search').textContent;
-  const names = () => [...document.querySelectorAll('.list-item h4')].map(h => h.textContent.trim());
+  const names = () => [...document.querySelectorAll('.list-item h3')].map(h => h.textContent.trim());
 
   it('steps back through the pages that were opened', async () => {
     mockFetch();
@@ -748,4 +748,170 @@ describe('the home search is shareable too', () => {
     expect(await screen.findByText('All Results')).toBeInTheDocument();
     expect(store.getState().app.allFilteredPlanets.map(p => p.name)).toEqual(['Tatooine']);
   }, 10000);
+});
+
+describe('search outcomes', () => {
+  const searchUrl = (resource, term) => `${API_ENDPOINTS[resource]}?search=${term}`;
+
+  it('says when nothing matches rather than showing an empty page', async () => {
+    mockFetch();
+    renderApp('/planets?q=zzz');
+    expect(await screen.findByText('No planets match “zzz”.')).toBeInTheDocument();
+    expect(screen.getByText('No planets match “zzz”.')).toHaveAttribute('role', 'status');
+    expect(screen.queryByText('Tatooine')).not.toBeInTheDocument();
+  });
+
+  it('tells a failed search apart from an empty one, and runs it again on request', async () => {
+    const fetchSpy = mockFetch({ [searchUrl('planets', 'tatoo')]: new Error('Down') });
+    const store = renderApp('/planets?q=tatoo');
+
+    expect(await screen.findByText('The search for “tatoo” could not be completed.')).toBeInTheDocument();
+    expect(screen.queryByText(/No planets match/)).not.toBeInTheDocument();
+    expect(store.getState().app.planetsSearchError).toEqual({ message: 'Down' });
+    // A failure is not remembered, so it can be retried
+    expect(store.getState().app.planetsSearch).not.toHaveProperty('tatoo');
+
+    fetchSpy.mockRestore();
+    mockFetch();
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+    expect(screen.queryByText(/could not be completed/)).not.toBeInTheDocument();
+    expect(store.getState().app.planetsSearchError).toBeNull();
+    expect(store.getState().app.planetsSearch.tatoo).toHaveLength(1);
+  });
+
+  it('shows that a search is under way until its results arrive', async () => {
+    let release;
+    const fetchSpy = mockFetch();
+    const passThrough = fetchSpy.getMockImplementation();
+    fetchSpy.mockImplementation((url) => (
+      url === searchUrl('planets', 'tatoo')
+        ? new Promise(resolve => { release = () => resolve(passThrough(url)); })
+        : passThrough(url)
+    ));
+    renderApp('/planets?q=tatoo');
+    expect(await screen.findByText('Searching planets for “tatoo”...')).toBeInTheDocument();
+    release();
+    expect(await screen.findByText('PLANETS Results')).toBeInTheDocument();
+    expect(screen.queryByText(/Searching planets/)).not.toBeInTheDocument();
+  });
+
+  it('on the home page, reports the resources that failed and keeps the ones that worked', async () => {
+    const fetchSpy = mockFetch({ [searchUrl('characters', 'tatoo')]: new Error('Down') });
+    const store = renderApp('/?q=tatoo');
+
+    expect(await screen.findByText('The search for “tatoo” could not be completed.')).toBeInTheDocument();
+    expect(screen.getByText('Tatooine')).toBeInTheDocument();
+    expect(screen.getByText('No starships match “tatoo”.')).toBeInTheDocument();
+    expect(store.getState().app.charactersSearchError).toEqual({ message: 'Down' });
+    expect(store.getState().app.planetsSearchError).toBeNull();
+
+    // Trying again only asks for what failed; the rest is already in memory
+    fetchSpy.mockRestore();
+    const healthy = mockFetch();
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(store.getState().app.charactersSearchError).toBeNull());
+    expect(screen.queryByText(/could not be completed/)).not.toBeInTheDocument();
+    expect(fetchedUrls(healthy).filter(url => url.includes('?search='))).toEqual([searchUrl('characters', 'tatoo')]);
+  });
+
+  it('clears a failure when the search is cleared', async () => {
+    mockFetch({ [searchUrl('planets', 'tatoo')]: new Error('Down') });
+    const store = renderApp('/planets?q=tatoo');
+    await screen.findByText(/could not be completed/);
+
+    await userEvent.clear(screen.getAllByPlaceholderText('Enter a search item')[1]);
+    await waitFor(() => expect(store.getState().app.planetsSearchError).toBeNull(), { timeout: 4000 });
+    expect(await screen.findByText('Tatooine')).toBeInTheDocument();
+  }, 10000);
+
+  it('says when no item satisfies the filters, and offers no pages to turn', async () => {
+    mockFetch();
+    renderApp('/planets?climate=volcanic');
+    expect(await screen.findByText('No planets match these filters.')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Loading all planets/)).not.toBeInTheDocument();
+  });
+});
+
+describe('accessibility', () => {
+  it('gives every page one level-one heading', async () => {
+    mockFetch();
+    renderApp('/');
+    await screen.findByText('Popular Characters');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Directory' })).toBeInTheDocument();
+  });
+
+  it('keeps the detail page to its own single level-one heading', async () => {
+    mockFetch();
+    renderApp('/description/planets/tatooine');
+    await screen.findByRole('heading', { level: 1, name: 'Tatooine' });
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('steps heading levels one at a time on a list page', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    const levels = screen.getAllByRole('heading').map(h => Number(h.tagName.slice(1)));
+    levels.forEach((level, index) => {
+      if (index > 0) expect(level - levels[index - 1]).toBeLessThanOrEqual(1);
+    });
+    expect(screen.getByRole('heading', { level: 3, name: 'Tatooine' })).toBeInTheDocument();
+  });
+
+  it('marks pagination as navigation with the current page identified', async () => {
+    mockFetch();
+    renderApp('/planets?page=2');
+    await screen.findByText('Extra Planet 1');
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: '1' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('names the slider dots and lists them properly', async () => {
+    mockFetch();
+    renderApp('/');
+    await screen.findByText('Popular Planets');
+    const dots = screen.getAllByRole('button', { name: /^Go to slide \d of \d$/ });
+    expect(dots.length).toBeGreaterThan(0);
+    dots.forEach(dot => expect(dot.closest('ul')).not.toBeNull());
+    expect(dots.filter(dot => dot.getAttribute('aria-current') === 'true')).toHaveLength(2);
+    expect(document.querySelectorAll('[id]').length).toBe(document.querySelectorAll('#root').length);
+  });
+
+  it('never writes "null" into a class name', async () => {
+    mockFetch();
+    renderApp('/');
+    await screen.findByText('Popular Planets');
+    const withNull = [...document.querySelectorAll('[class]')].filter(el => el.className.split(/\s+/).includes('null'));
+    expect(withNull).toHaveLength(0);
+  });
+
+  it('does not nest a button inside a link anywhere on the home page', async () => {
+    mockFetch();
+    renderApp('/');
+    await screen.findByText('Popular Characters');
+    expect(document.querySelectorAll('a button')).toHaveLength(0);
+    expect(screen.getAllByRole('link', { name: 'View All' })).toHaveLength(6);
+  });
+
+  it('does not nest a button inside a link on the cards', async () => {
+    mockFetch();
+    renderApp('/starships');
+    await screen.findByText('Starwars Starships');
+    expect(document.querySelectorAll('a button')).toHaveLength(0);
+    const link = screen.getAllByRole('link').find(l => l.getAttribute('href') === '/description/starships/x-wing');
+    expect(link).toHaveClass('list-item__button');
+    expect(link).toHaveTextContent('Read more');
+  });
+
+  it('labels every search box with what it searches', async () => {
+    mockFetch();
+    renderApp('/planets');
+    await screen.findByText('Starwars Planets');
+    expect(screen.getByRole('textbox', { name: 'Search the whole directory' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search planets' })).toBeInTheDocument();
+  });
 });

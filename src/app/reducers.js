@@ -49,6 +49,7 @@ const resourceDefaults = (resource) => {
     [keys.search]: {},
     [keys.filtered]: [],
     [keys.isFiltering]: false,
+    [keys.searchError]: null,
   };
 };
 
@@ -68,15 +69,17 @@ export const defaultState = {
 
 // The results of one query for one resource. A repeated query is served from
 // the in-memory cache; a new one is shown, and remembered unless it failed so
-// that it can be retried.
+// that it can be retried. The failure itself is kept, so the page can say the
+// search did not run rather than that nothing matched.
 const applySearch = (state, resource, param, results, failed) => {
   const keys = stateKeys(resource);
   const cache = state[keys.search];
   if (param in cache) {
-    return { [keys.filtered]: cache[param] };
+    return { [keys.filtered]: cache[param], [keys.searchError]: null };
   }
   return {
     [keys.filtered]: results,
+    [keys.searchError]: failed || null,
     ...(!failed && { [keys.search]: { ...cache, [param]: results } }),
   };
 };
@@ -169,13 +172,17 @@ export default function appReducers (state=defaultState, action) {
         ...state,
         [keys.filtered]: [],
         [keys.isFiltering]: false,
+        [keys.searchError]: null,
       }
     }
 
     case RESET_SEARCH_ALL: {
       return {
         ...state,
-        ...forEachResource(resource => ({ [stateKeys(resource).filtered]: [] })),
+        ...forEachResource(resource => ({
+          [stateKeys(resource).filtered]: [],
+          [stateKeys(resource).searchError]: null,
+        })),
         isFilteringAll: false,
       }
     }

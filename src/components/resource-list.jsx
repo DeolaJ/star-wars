@@ -32,7 +32,7 @@ const ResourceList = ({
   resource, data, doFetchPage, doFetchAll, doSearch, resetSearch,
 }) => {
   const { label, imagePosition, sortFields } = RESOURCES[resource];
-  const { paging, error, filtered, isFiltering, items: allItems } = data;
+  const { paging, error, filtered, isFiltering, searchError, items: allItems } = data;
   const {
     query, page, sort, filters, isProcessing, filterFields,
     setQuery, setPage, setSort, setFilter,
@@ -95,6 +95,10 @@ const ResourceList = ({
 
   const pageError = paging.errors[page];
   const pageLoading = !isProcessing && paging.loading[page];
+  // A search is on its way once the URL names one and nothing has come back yet
+  const searching = Boolean(query) && !isFiltering;
+  // Filters that no item satisfies, once every item has been seen
+  const nothingMatches = isProcessing && loadedEveryPage && !isFiltering && processed.length === 0;
 
   return (
     <Section
@@ -145,6 +149,7 @@ const ResourceList = ({
                   mini
                   value={query}
                   handleSearch={setQuery}
+                  label={`Search ${label.toLowerCase()}`}
                 />
               </div>
             </div>
@@ -156,12 +161,22 @@ const ResourceList = ({
               )
             }
             {
+              searching && (
+                <p role="status">
+                  {`Searching ${label.toLowerCase()} for “${query}”...`}
+                </p>
+              )
+            }
+            {
               isFiltering
               ? (
                 <SearchResult
                   category={resource}
                   items={paged}
                   view={view}
+                  query={query}
+                  errors={{ [resource]: searchError }}
+                  onRetry={() => doSearch(resource, query)}
                 />
               )
               : (
@@ -181,6 +196,13 @@ const ResourceList = ({
                     )
                   }
                   {
+                    nothingMatches && (
+                      <p className="list-empty" role="status">
+                        {`No ${label.toLowerCase()} match these filters.`}
+                      </p>
+                    )
+                  }
+                  {
                     paged.map(item => (
                       <ListItem
                         key={item.name}
@@ -191,12 +213,16 @@ const ResourceList = ({
                       />
                     ))
                   }
-                  <Pagination
-                    totalItems={totalItems}
-                    resultsPerPage={API_PAGE_SIZE}
-                    changeResultPage={setPage}
-                    currentPage={page}
-                  />
+                  {
+                    totalItems > 0 && (
+                      <Pagination
+                        totalItems={totalItems}
+                        resultsPerPage={API_PAGE_SIZE}
+                        changeResultPage={setPage}
+                        currentPage={page}
+                      />
+                    )
+                  }
                 </>
               )
             }

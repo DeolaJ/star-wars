@@ -789,3 +789,37 @@ describe('loading a whole resource', () => {
     expect(store.getState().app.loadingPlanetsError).toEqual({});
   });
 });
+
+describe('reporting a failed search', () => {
+  it('records why the search failed and recovers when it is run again', async () => {
+    const fetchSpy = mockFetch({ [`${API_ENDPOINTS.planets}?search=tatoo`]: new Error('Down') });
+    const store = makeStore();
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
+    expect(store.getState().app.planetsSearchError).toEqual({ message: 'Down' });
+    expect(store.getState().app.allFilteredPlanets).toEqual([]);
+    expect(store.getState().app.isFilteringPlanets).toBe(true);
+
+    fetchSpy.mockRestore();
+    mockFetch();
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
+    expect(store.getState().app.planetsSearchError).toBeNull();
+    expect(store.getState().app.allFilteredPlanets.map(p => p.name)).toEqual(['Tatooine']);
+  });
+
+  it('records each failed resource of a site-wide search separately', async () => {
+    mockFetch({ [`${API_ENDPOINTS.characters}?search=wing`]: new Error('Down') });
+    const store = makeStore();
+    await store.dispatch(actions.doSearchAll('wing'));
+    const state = store.getState().app;
+    expect(state.charactersSearchError).toEqual({ message: 'Down' });
+    expect(state.starshipsSearchError).toBeNull();
+    expect(state.allFilteredStarships.map(s => s.name)).toEqual(['X-wing']);
+  });
+
+  it('does not report a failure when both servers answer', async () => {
+    mockFetch({}, { down: ['primary'] });
+    const store = makeStore();
+    await store.dispatch(actions.doSearch('planets', 'tatoo'));
+    expect(store.getState().app.planetsSearchError).toBeNull();
+  });
+});

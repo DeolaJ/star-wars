@@ -36,24 +36,27 @@ const Slider = ({
           ))
         }
       </div>
-      <div className="slider__control">
+      {/* The dots are a list of controls; each says where it goes, since it
+          has no text of its own */}
+      <ul className="slider__control">
         {
           pageNumbers.map(number => (
             <li
               key={number}
-              className={`slider__item ${number === currentIndex ? 'active' : null}`}
+              className={`slider__item ${number === currentIndex ? 'active' : ''}`}
             >
               <button 
                 type="button"
-                id={number}
                 onClick={() => setCurrentIndex(number)}
                 className="slider__dot"
+                aria-label={`Go to slide ${number} of ${parts}`}
+                aria-current={number === currentIndex ? 'true' : undefined}
               >
               </button>
             </li>
           ))
         }
-      </div>
+      </ul>
     </div>
   );
 };

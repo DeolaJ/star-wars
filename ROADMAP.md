@@ -27,6 +27,6 @@ A rough plan for the work ahead. Estimates are approximate.
 ## Quality (about 6 hours)
 
 - [x] Replace the default CRA test, which still looks for "learn react", with tests for the reducers, action creators and main pages
-- [ ] Accessibility pass on search, pagination and the slider (the `jsx-a11y` lint rules are already on)
-- [ ] Error and empty states for failed or empty searches
+- [x] Accessibility pass on search, pagination and the slider (the `jsx-a11y` lint rules are already on)
+- [x] Error and empty states for failed or empty searches
 - [ ] GitHub Actions workflow for lint, tests and build

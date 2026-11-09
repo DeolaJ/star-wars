@@ -65,3 +65,22 @@
     text-align: center;
   }
 }
+// Search feedback: nothing matched, or the search could not run
+.search-result__empty,
+.search-result__failed,
+.list-empty {
+  flex-basis: 100%;
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #494857;
+}
+
+.search-result__retry {
+  margin-left: .75rem;
+  padding: .4rem .9rem;
+  border: 1px solid #494857;
+  background: none;
+  color: #494857;
+  cursor: pointer;
+  font-size: .9rem;
+}

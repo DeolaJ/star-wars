@@ -21,6 +21,16 @@ describe('Pagination', () => {
     expect(change.mock.calls).toEqual([[3], [1], [3]]);
   });
 
+  it('is a navigation landmark that identifies the current page', () => {
+    render(<Pagination totalItems={25} resultsPerPage={10} currentPage={2} changeResultPage={() => {}} />);
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: '1' })).not.toHaveAttribute('aria-current');
+    const withNull = [...document.querySelectorAll('[class]')].filter(el => el.className.split(/\s+/).includes('null'));
+    expect(withNull).toHaveLength(0);
+    expect(document.querySelectorAll('[id]')).toHaveLength(0);
+  });
+
   it('disables the arrows at the first and last page', () => {
     const { rerender } = render(<Pagination totalItems={25} resultsPerPage={10} currentPage={1} changeResultPage={() => {}} />);
     expect(screen.getByRole('button', { name: 'previous icon' })).toBeDisabled();

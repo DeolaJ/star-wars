@@ -76,8 +76,10 @@
       vertical-align: middle;
     }
 
-    h2 {
+    h1 {
       display: inline-block;
+      font-size: 1.5em;
+      margin: .83em 0;
     }
 
     @media (max-width: 768px) {
@@ -87,7 +89,7 @@
     @media (max-width: 460px) {
       max-width: 80%;
 
-      h2 {
+      h1 {
         font-size: 1.1rem;
       }
     }
@@ -97,6 +99,8 @@
     max-width: 60%;
     margin: 1.2rem auto;
     line-height: 1.5;
+    font-size: 1.17em;
+    font-weight: bold;
 
     @media (max-width: 768px) {
       max-width: 70%;

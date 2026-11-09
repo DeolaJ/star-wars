@@ -22,14 +22,15 @@ const MainHero = ({
       <div className="hero__content">
         <div className="hero__heading">
           <img src={Emblem} alt="Star Wars Directory emblem" className="hero__logo" width="50" height="50" />
-          <h2>Directory</h2>
+          <h1>Directory</h1>
         </div>
-        <h3 className="hero__subtext">
+        <p className="hero__subtext">
           Find you favourite Characters, Films, Species, Starships and Planets.
-        </h3>
+        </p>
         <SearchBar 
           value={searchValue}
           handleSearch={handleSearch}
+          label="Search the whole directory"
         />
       </div>
     </Hero>

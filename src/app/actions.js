@@ -149,10 +149,10 @@ export const doSearch = (resource, param) => async (dispatch, getState) => {
   let failed = false;
   try {
     results = await getSearchResults(getState(), resource, param);
-  } catch {
-    // Shown as no results, as before, but not remembered so it can be retried
+  } catch (error) {
+    // Shown as a failed search, and not remembered so it can be retried
     results = [];
-    failed = true;
+    failed = { message: error.message };
   }
   if (latestSearch[resource] !== param) return;
   return dispatch(searchResource({ resource, param, results, failed }))
@@ -164,8 +164,8 @@ export const doSearchAll = (param) => async (dispatch, getState) => {
   const failed = {};
   const settled = await Promise.all(
     RESOURCE_KEYS.map(resource => (
-      getSearchResults(state, resource, param).catch(() => {
-        failed[resource] = true;
+      getSearchResults(state, resource, param).catch((error) => {
+        failed[resource] = { message: error.message };
         return [];
       })
     ))

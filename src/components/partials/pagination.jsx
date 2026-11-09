@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import RightChevron from '../../assets/chevron-right.svg';
 import LeftChevron from '../../assets/chevron-left.svg';
 
+// Page controls, as a navigation landmark with the current page marked up as
+// such rather than by colour alone
 const Pagination = ({
   totalItems, currentPage, resultsPerPage, changeResultPage,
 }) => {
@@ -16,19 +18,19 @@ const Pagination = ({
   }, [parts]);
 
   return (
-    <div className="pagination">
+    <nav className="pagination" aria-label="Pagination">
       <ul className="pagination__list">
         {
           pageNumbers.map(number => (
             <li
               key={number}
-              className={`pagination__item ${number === currentPage ? 'active' : null}`}
+              className={`pagination__item ${number === currentPage ? 'active' : ''}`}
             >
               <button 
                 type="button"
-                id={number}
                 onClick={() => changeResultPage(number)}
                 className="pagination__button"
+                aria-current={number === currentPage ? 'page' : undefined}
               >
                 {number}
               </button>
@@ -52,7 +54,7 @@ const Pagination = ({
           <img src={RightChevron} alt="next icon" />
         </button>
       </div>
-    </div>
+    </nav>
   );
 };
 

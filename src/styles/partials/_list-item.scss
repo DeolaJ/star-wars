@@ -119,8 +119,10 @@
   &__title {
     color: #494857;
 
-    h4 {
+    h3 {
       margin: .5rem 0;
+      font-size: 1rem;
+      font-weight: bold;
     }
   }
 
@@ -129,11 +131,18 @@
     display: inherit;
   }
 
-  &__button button {
+  // The link looks like the button it used to wrap, so it reads as one control
+  // and is one control: nesting a button inside a link is not valid HTML
+  &__button {
     margin-top: 1rem;
     background-color: #d8d8d8;
     padding: .7rem 1.2rem;
     font-size: .8rem;
+    color: inherit;
+    text-decoration: none;
+    display: inline-block;
+    line-height: normal;
+    font-family: inherit;
 
     img {
       width: 20px;

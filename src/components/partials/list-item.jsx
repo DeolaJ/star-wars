@@ -31,9 +31,9 @@ const ListItem = ({ item, type, imagePosition, view }) => {
       </div>
       <div className="list-item__body">
         <div className="list-item__title">
-          <h4>
+          <h3>
             {name}
-          </h4>
+          </h3>
         </div>
         <p className="list-item__description">
           {cardText(item)}
@@ -46,11 +46,7 @@ const ListItem = ({ item, type, imagePosition, view }) => {
         {
           imagePosition === 'top' && (
             <Link to={detailPath} className="list-item__button">
-              <button
-                type="button"
-              >
-                Read more <img src={Arrow} alt="arrow" />
-              </button>
+              Read more <img src={Arrow} alt="" />
             </Link>
           )
         }

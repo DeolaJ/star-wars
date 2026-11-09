@@ -209,3 +209,53 @@ describe('related items', () => {
     expect(state.descriptionItem.resource).toBe('characters');
   });
 });
+
+describe('search failures', () => {
+  const failed = { message: 'Down' };
+
+  it('starts with no failure recorded for any resource', () => {
+    RESOURCE_KEYS.forEach(resource => {
+      expect(defaultState[`${resource}SearchError`]).toBeNull();
+    });
+  });
+
+  it('keeps why a search failed, and does not remember the search', () => {
+    const state = reducer(loaded, { type: types.SEARCH_RESOURCE, payload: { resource: 'planets', results: [], param: 'tat', failed } });
+    expect(state.planetsSearchError).toEqual(failed);
+    expect(state.isFilteringPlanets).toBe(true);
+    expect(state.planetsSearch).not.toHaveProperty('tat');
+  });
+
+  it('clears the failure when the same search succeeds', () => {
+    const broken = { ...loaded, planetsSearchError: failed };
+    const state = reducer(broken, { type: types.SEARCH_RESOURCE, payload: { resource: 'planets', results: [{ name: 'Tatooine' }], param: 'tat' } });
+    expect(state.planetsSearchError).toBeNull();
+    expect(state.planetsSearch.tat).toHaveLength(1);
+  });
+
+  it('clears the failure when a search is served from memory', () => {
+    const broken = { ...loaded, planetsSearchError: failed, planetsSearch: { tat: [{ name: 'Tatooine' }] } };
+    const state = reducer(broken, { type: types.SEARCH_RESOURCE, payload: { resource: 'planets', results: [], param: 'tat' } });
+    expect(state.planetsSearchError).toBeNull();
+  });
+
+  it('clears the failure when the search is reset', () => {
+    const broken = { ...loaded, planetsSearchError: failed, charactersSearchError: failed };
+    expect(reducer(broken, { type: types.RESET_SEARCH_RESOURCE, payload: { resource: 'planets' } }).planetsSearchError).toBeNull();
+    expect(reducer(broken, { type: types.RESET_SEARCH_RESOURCE, payload: { resource: 'planets' } }).charactersSearchError).toEqual(failed);
+    const all = reducer(broken, { type: types.RESET_SEARCH_ALL });
+    expect(all.planetsSearchError).toBeNull();
+    expect(all.charactersSearchError).toBeNull();
+  });
+
+  it('records which resources of a site-wide search failed', () => {
+    const state = reducer(loaded, {
+      type: types.SEARCH_ALL,
+      payload: { param: 'x', results: { characters: [], planets: [], starships: [], films: [], species: [], vehicles: [] }, failed: { characters: failed } },
+    });
+    expect(state.charactersSearchError).toEqual(failed);
+    expect(state.planetsSearchError).toBeNull();
+    expect(state.charactersSearch).not.toHaveProperty('x');
+    expect(state.planetsSearch.x).toEqual([]);
+  });
+});

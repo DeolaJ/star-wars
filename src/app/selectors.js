@@ -15,6 +15,7 @@ export const stateKeys = (resource) => {
     search: `${resource}Search`,
     filtered: `allFiltered${name}`,
     isFiltering: `isFiltering${name}`,
+    searchError: `${resource}SearchError`,
   };
 };
 

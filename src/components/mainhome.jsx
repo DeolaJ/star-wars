@@ -43,11 +43,7 @@ const Popular = ({ resource, display, count, data }) => {
             }
             <div className="section__button">
               <Link to={listPath(resource)}>
-                <button
-                  type="button"
-                >
-                  View All
-                </button>
+                View All
               </Link>
             </div>
           </>

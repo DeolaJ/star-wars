@@ -7,7 +7,7 @@ import Search from '../../assets/search.svg';
 // the address bar is not rewritten on every keystroke. `value` is where the
 // query lives (the URL), and the box follows it when it changes from somewhere
 // else, such as the back button or a shared link.
-const SearchBar = ({ handleSearch, value = '', mini = false }) => {
+const SearchBar = ({ handleSearch, value = '', mini = false, label = 'Search' }) => {
   const [searchValue, setSearchValue] = useState(value);
   // The last value this box handed over, so a change coming back from the URL
   // is told apart from one the user is still typing
@@ -35,13 +35,14 @@ const SearchBar = ({ handleSearch, value = '', mini = false }) => {
   }, [value]);
 
   return (
-    <div className={`searchbar ${mini ? 'mini' : null}`}>
+    <div className={`searchbar ${mini ? 'mini' : ''}`}>
       <input
         type="text"
         onChange={(e) => setSearchValue(e.target.value)}
         onBlur={(e) => setSearchValue(e.target.value)}
         value={searchValue}
         placeholder="Enter a search item"
+        aria-label={label}
         className="searchbar__input"
       />
       <div className="searchbar__icon">
@@ -55,6 +56,8 @@ SearchBar.propTypes = {
   handleSearch: PropTypes.func.isRequired,
   value: PropTypes.string,
   mini: PropTypes.bool,
+  // What the box searches, for assistive technology; the placeholder is only a hint
+  label: PropTypes.string,
 };
 
 export default SearchBar;
