@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath, resourceForPath, relatedUrls, filterValues, filterItems, sortItems } from './resources';
+import { RESOURCES, RESOURCE_KEYS, HOME_SECTIONS, normalise, normaliseAll, descriptionPath, listPath, resourceForPath, relatedUrls, filterValues, filterItems, sortItems, paragraphs } from './resources';
 import { API_BASE_URL, API_PATHS, API_ENDPOINTS } from './config';
 
 describe('resource configuration', () => {
@@ -201,5 +201,39 @@ describe('filtering and sorting', () => {
       sortItems(planets, '-name', sortFields);
       expect(planets.map(p => p.name)).toEqual(before);
     });
+  });
+});
+
+describe('description paragraphs', () => {
+  it('splits on the blank line and tidies the indentation away', () => {
+    expect(paragraphs('\n  One line.\n  Still the first.\n\n  A second.\n'))
+      .toEqual(['One line. Still the first.', 'A second.']);
+  });
+
+  it('gives a single paragraph back as one', () => {
+    expect(paragraphs('  Just the one.  ')).toEqual(['Just the one.']);
+  });
+
+  it('has nothing to show for nothing', () => {
+    expect(paragraphs('')).toEqual([]);
+    expect(paragraphs(undefined)).toEqual([]);
+  });
+
+  it.each(RESOURCE_KEYS)('leaves no stray slash-n in the %s description', (key) => {
+    const item = {
+      name: 'Thing', gender: 'male', height: '1', mass: '1', hair_color: 'x', eye_color: 'x',
+      skin_color: 'x', birth_year: '1', rotation_period: '1', diameter: '1', orbital_period: '1',
+      climate: 'arid', gravity: '1', terrain: 'desert', population: '1', surface_water: '1',
+      model: 'x', manufacturer: 'x', cost_in_credits: '1', length: '1', max_atmosphering_speed: '1',
+      crew: '1', cargo_capacity: '1', passengers: '1', consumables: '1', hyperdrive_rating: '1',
+      MGLT: '1', starship_class: 'x', episode_id: 1, director: 'x', producer: 'x',
+      release_date: '1977-05-25', opening_crawl: 'Crawl.', classification: 'mammal',
+      designation: 'sentient', average_height: '1', skin_colors: 'x', hair_colors: 'x',
+      eye_colors: 'x', average_lifespan: '1', language: 'x', vehicle_class: 'x',
+    };
+    const text = RESOURCES[key].describe(item);
+    expect(text).not.toMatch(/\/n/);
+    // every resource's description reads as more than one paragraph
+    expect(paragraphs(text).length).toBeGreaterThan(1);
   });
 });

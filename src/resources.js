@@ -41,7 +41,8 @@ export const RESOURCES = {
       `${firstWord(character.name)} was born in the year ${character.birth_year}, and is ${character.gender}`
     ),
     describe: (character) => `
-      ${character.name} is ${character.gender}, and is ${character.height} tall. /n/n
+      ${character.name} is ${character.gender}, and is ${character.height} tall.
+
       ${pronoun(character.gender)} has a mass of ${character.mass}, 
       ${character.hair_color} hair color, ${character.eye_color} eye color, ${character.skin_color} skin color, 
       and was born in the year ${character.birth_year}.
@@ -59,7 +60,8 @@ export const RESOURCES = {
       `${planet.name} has a climate of ${planet.climate}, and a population of ${planet.population}`
     ),
     describe: (planet) => `
-      ${planet.name} has a rotation period of ${planet.rotation_period}, and has a diamater of ${planet.diameter}. /n/n
+      ${planet.name} has a rotation period of ${planet.rotation_period}, and has a diamater of ${planet.diameter}.
+
       It has an orbital period of ${planet.orbital_period}, ${asList(planet.climate)} climate, gravity of ${planet.gravity}, and has ${asList(planet.terrain)} terrains. 
       The population of ${planet.name} is ${planet.population}, and has a surface water of ${planet.surface_water}.
     `,
@@ -76,7 +78,8 @@ export const RESOURCES = {
       `${firstWord(starship.name)} is of the ${starship.model} model, and has a cargo of ${starship.cargo_capacity}`
     ),
     describe: (starship) => `
-      ${starship.name} is of the ${starship.model} model and was manufactured by ${starship.manufacturer}. It cost ${starship.cost_in_credits} credits. /n/n
+      ${starship.name} is of the ${starship.model} model and was manufactured by ${starship.manufacturer}. It cost ${starship.cost_in_credits} credits.
+
       It has a length of ${starship.length}, maximum atmosphering speed of ${starship.max_atmosphering_speed}, crew capacity of ${starship.crew}, and cargo capacity of ${starship.cargo_capacity}. It has ${starship.passengers} passengers.
       It has ${starship.consumables} consumables, ${starship.hyperdrive_rating} hyperdrive rating, ${starship.MGLT} MGLT, and starship class of ${starship.starship_class}.
     `,
@@ -179,6 +182,15 @@ export const resourceForPath = (path) => (
 // ("unknown", "n/a" and null all mean nothing)
 export const relatedUrls = (value) => (
   (Array.isArray(value) ? value : [value]).filter(entry => typeof entry === 'string' && /^https?:\/\//.test(entry))
+);
+
+// A description split into its paragraphs. The templates above separate them
+// with a blank line, and each line carries the indentation of the source.
+export const paragraphs = (description) => (
+  String(description || '')
+    .split(/\n\s*\n/)
+    .map(part => part.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
 );
 
 // The values a filter field takes across `items`. Fields such as a planet's

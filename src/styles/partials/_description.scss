@@ -53,6 +53,18 @@
     padding: 2rem;
   }
 
+  &__content {
+
+    p {
+      margin: 0 0 1rem;
+      line-height: 1.6;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
   &__related:empty {
     display: none;
   }

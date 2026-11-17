@@ -8,7 +8,7 @@ import RelatedItems, { itemsShape } from './partials/related-items';
 import RightChevron from '../assets/chevron-right.svg';
 import LeftChevron from '../assets/chevron-left.svg';
 import { artworkFor, SIZES } from './partials/artwork';
-import { descriptionPath } from '../resources';
+import { descriptionPath, paragraphs } from '../resources';
 
 const Description = ({
   recentlyViewed, descriptionItem, items,
@@ -97,7 +97,11 @@ const Description = ({
                 {current.category.name}
               </h2>
               <div className="description__content">
-                {current.description}
+                {
+                  paragraphs(current.description).map((part, index) => (
+                    <p key={index}>{part}</p>
+                  ))
+                }
               </div>
             </div>
             <div className="description__related">

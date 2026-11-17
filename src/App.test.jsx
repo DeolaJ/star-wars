@@ -834,6 +834,34 @@ describe('search outcomes', () => {
   });
 });
 
+describe('detail page text', () => {
+  it('lays the description out in paragraphs, with no stray slash-n', async () => {
+    mockFetch();
+    renderApp('/description/characters/luke_skywalker');
+    await screen.findByRole('heading', { level: 1, name: 'Luke Skywalker' });
+
+    const content = document.querySelector('.description__content');
+    const parts = [...content.querySelectorAll('p')].map(p => p.textContent);
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toBe('Luke Skywalker is male, and is 172 tall.');
+    expect(parts[1]).toMatch(/^He has a mass of 77,/);
+    expect(content.textContent).not.toMatch(/\/n/);
+  });
+
+  it.each([
+    ['/description/planets/tatooine', 'Tatooine'],
+    ['/description/starships/x-wing', 'X-wing'],
+    ['/description/films/a_new_hope', 'A New Hope'],
+  ])('breaks %s into paragraphs too', async (route, name) => {
+    mockFetch();
+    renderApp(route);
+    await screen.findByRole('heading', { level: 1, name });
+    const content = document.querySelector('.description__content');
+    expect(content.querySelectorAll('p').length).toBeGreaterThan(1);
+    expect(content.textContent).not.toMatch(/\/n/);
+  });
+});
+
 describe('accessibility', () => {
   it('gives every page one level-one heading', async () => {
     mockFetch();

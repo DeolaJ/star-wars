@@ -15,8 +15,12 @@ Star Wars fans who want a quick, good-looking way to look things up, and develop
 - Home page with featured items from every category
 - Separate list pages for characters, planets, starships, films, species and vehicles, with pagination
 - Search within each category or across everything at once
-- Detail page for every item
-- Recently viewed items, kept between visits
+- Filter and sort each list, for example planets by climate or starships by class
+- Shareable links: the search, page, filters and sorting all live in the URL, and the browser's back and forward buttons restore them
+- Detail page for every item, with links to the items it relates to (a character's homeworld and starships, a film's cast)
+- Recently viewed items, with next and previous to step through them
+- Responses cached for a day, so a return visit loads without waiting
+- Clear messages when a search finds nothing or cannot run, with a way to try again
 
 | Planets                                    | Starships                                    | Detail page                                      |
 | ------------------------------------------ | -------------------------------------------- | ------------------------------------------------ |
@@ -29,6 +33,7 @@ Star Wars fans who want a quick, good-looking way to look things up, and develop
 - [React Router 6](https://reactrouter.com)
 - [Sass](https://sass-lang.com) for styles
 - [SWAPI](https://swapi.dev) for data, with [swapi.py4e.com](https://swapi.py4e.com) as a fallback mirror
+- [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com) for the tests
 - Hosted on [Netlify](https://www.netlify.com)
 
 ## Getting started
@@ -63,7 +68,8 @@ No API keys or environment variables are needed.
 The images in `src/assets/images` are original artwork drawn by `scripts/generate-art.py` (Python 3 with numpy and Pillow). Each image is rendered from a fixed seed, so running the script again reproduces the same files:
 
     python scripts/generate-art.py            # all artwork
-    python scripts/generate-art.py starships  # one group: hero, characters, planets, starships
+    python scripts/generate-art.py starships  # one group: hero, characters, planets,
+                                              # starships, films, species or vehicles
 
 ## Roadmap
 
